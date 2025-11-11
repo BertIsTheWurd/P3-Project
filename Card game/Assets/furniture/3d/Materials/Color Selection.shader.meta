@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 66d6dc0bbcbd953499c575dd3dd2905f
+timeCreated: 1508253060
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 101651
+  packageName: Colorable Leather Sofa And Armchair
+  packageVersion: 1.0
+  assetPath: Assets/furniture/3d/Materials/Color Selection.shader
+  uploadId: 206782
