@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 9052dfd6d8414754d88a8b6b775679c7
+timeCreated: 1508257249
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 101651
+  packageName: Colorable Leather Sofa And Armchair
+  packageVersion: 1.0
+  assetPath: Assets/furniture/prefabs/armchair_1_mid.prefab
+  uploadId: 206782
