@@ -12,6 +12,7 @@ public class GameManager : MonoBehaviour
     
     public void DrawToMax()
     {
+        Debug.Log("Drawing to max");
         while (playerHand.Count < HandSize)
         {
             
