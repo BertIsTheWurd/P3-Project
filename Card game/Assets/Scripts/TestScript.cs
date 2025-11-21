@@ -5,6 +5,9 @@ public class TestScript : MonoBehaviour
     public KeyCode drawToMax = KeyCode.D;
     public KeyCode playCard= KeyCode.P;
     private GameManager gameManager;
+    public GameObject testCard;
+    public int nextSpotX, nextSpotZ;
+    
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -22,8 +25,16 @@ public class TestScript : MonoBehaviour
 
         if (Input.GetKeyDown(playCard))
         {
-            gameManager.PlayCard();
+            gameManager.PlayCard(testCard.GetComponent<Card>(), nextSpotX, nextSpotZ);
+
+                nextSpotX++;
+                if (nextSpotX >= gameManager.gridX)
+                {
+                    nextSpotX = 0;
+                    nextSpotZ++;
+                }
         }
+        
         if (Input.GetKeyDown(KeyCode.C))
         {
             gameManager.DebugCubes();

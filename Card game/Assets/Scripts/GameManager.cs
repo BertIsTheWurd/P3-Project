@@ -4,6 +4,8 @@ using UnityEngine.Serialization;
 
 public class GameManager : MonoBehaviour
 {
+    private CardPool cardPool;
+    
     public int gridX;
     public int gridZ;
     public Transform gridStart, gridEnd;
@@ -20,6 +22,8 @@ public class GameManager : MonoBehaviour
 
     public void Start()
     {
+        cardPool = GameObject.Find("Card Pool").GetComponent<CardPool>();
+        
         cardSlots = new Vector3[gridZ][];
         for (int i = 0; i < cardSlots.Length; i++)
         {
@@ -53,13 +57,21 @@ public class GameManager : MonoBehaviour
         }
     }
     
-    public void DrawToMax()
+    public GameObject DrawToMax()
     {
         Debug.Log("Drawing to max");
+        return null;
     }
 
-    public void PlayCard()
+    public void PlayCard(Card cardInfo, int gridSpotX, int gridSpotZ)
     {
         Debug.Log("Playing card");
+        GameObject card = cardPool.ReturnCard();
+        
+        Card cardData = card.GetComponent<Card>();
+        cardInfo.CopyTo(cardData);
+        
+        card.transform.position = cardSlots[gridSpotZ][gridSpotX];
+        card.SetActive(true);
     }
 }
