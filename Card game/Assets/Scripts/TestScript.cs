@@ -17,13 +17,16 @@ public class TestScript : MonoBehaviour
         //This is abhorrent, do not do this for actual scripts
         if (Input.GetKeyDown(drawToMax))
         {
-            Debug.Log("Attempting DrawToMax");
             gameManager.DrawToMax();
         }
 
         if (Input.GetKeyDown(playCard))
         {
             gameManager.PlayCard();
+        }
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            gameManager.DebugCubes();
         }
     }
 }

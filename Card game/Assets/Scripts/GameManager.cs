@@ -1,26 +1,65 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class GameManager : MonoBehaviour
 {
+    public int gridX;
+    public int gridZ;
+    public Transform gridStart, gridEnd;
+    
     public List<Card> playerDeck = new List<Card>();
     public List<Card> playerHand = new List<Card>();
-    public Transform[][] cardSlots;
+    public Vector3[][] cardSlots;
     public bool[][] availableCardSlots;
-
+    
     public int HandSize = 6;
+
+    //Debug Stuff
+    public GameObject TestingCube;
+
+    public void Start()
+    {
+        cardSlots = new Vector3[gridZ][];
+        for (int i = 0; i < cardSlots.Length; i++)
+        {
+            cardSlots[i] = new Vector3[gridX];
+        }
+        
+        float gridSizeX = gridEnd.position.x - gridStart.position.x;
+        float gridSizeZ = gridEnd.position.z - gridStart.position.z;
+
+        float cardSpaceX = gridSizeX / gridX;
+        float cardSpaceZ = gridSizeZ / gridZ;
+        
+        //Distributes Spaces based on grid size & gridStart/End
+        for (int i = 0; i < cardSlots.Length; i++)
+        {
+            for (int j = 0; j < cardSlots[i].Length; j++)
+            {
+                cardSlots[i][j] = new Vector3(gridStart.position.x + cardSpaceX * j, gridStart.position.y, gridStart.position.z + cardSpaceZ * i);
+            }
+        }
+    }
+
+    public void DebugCubes()
+    {
+        for (int i = 0; i < cardSlots.Length; i++)
+        {
+            for (int j = 0; j < cardSlots[i].Length; j++)
+            {
+                Instantiate(TestingCube, cardSlots[i][j], Quaternion.identity);
+            }
+        }
+    }
     
     public void DrawToMax()
     {
         Debug.Log("Drawing to max");
-        while (playerHand.Count < HandSize)
-        {
-            
-        }
     }
 
     public void PlayCard()
     {
-        
+        Debug.Log("Playing card");
     }
 }

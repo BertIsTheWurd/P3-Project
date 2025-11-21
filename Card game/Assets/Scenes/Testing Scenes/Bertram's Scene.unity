@@ -148,6 +148,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 595216ff299733246b7feed5a0f3c205, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
+  gridX: 5
+  gridY: 7
+  gridStart: {fileID: 0}
+  gridEnd: {fileID: 0}
   playerDeck: []
   playerHand: []
   HandSize: 6
