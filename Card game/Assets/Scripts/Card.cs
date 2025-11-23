@@ -19,7 +19,7 @@ public class Card : MonoBehaviour
         other.type = type;
     }
 
-    public void Start()
+    public void OnEnable()
     {
         gameObject.GetComponent<SpriteRenderer>().sprite = cardImage;
     }

@@ -5,6 +5,7 @@ public class TestScript : MonoBehaviour
     public KeyCode drawToMax = KeyCode.D;
     public KeyCode playCard= KeyCode.P;
     private GameManager gameManager;
+    private DrawPile drawPile;
     public GameObject testCard;
     public int nextSpotX, nextSpotZ;
     
@@ -12,6 +13,7 @@ public class TestScript : MonoBehaviour
     void Start()
     {
         gameManager =  GameObject.Find("Game Manager").GetComponent<GameManager>();
+        drawPile = GameObject.Find("Draw Pile").GetComponent<DrawPile>();
     }
 
     // Update is called once per frame
@@ -38,6 +40,12 @@ public class TestScript : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.C))
         {
             gameManager.DebugCubes();
+        }
+
+        //Move top card from Drawpile to Discardpile
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            gameManager.DiscardCard(drawPile.drawCard());
         }
     }
 }
