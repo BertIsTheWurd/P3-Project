@@ -2,6 +2,7 @@ using UnityEngine;
 using Unity.Cinemachine;
 using UnityEngine.InputSystem;
 using System;
+using UnityEngine.Serialization;
 
 public class CameraSwitcher : MonoBehaviour
 {
@@ -13,7 +14,7 @@ public class CameraSwitcher : MonoBehaviour
     [SerializeField] private CinemachineCamera[] cameras; // The 3 cameras
     [SerializeField] private CinemachineCamera fpsCamera;
     // Array to hold all your card GameObjects
-    [SerializeField] private GameObject[] cardObjects; 
+    [SerializeField] private GameObject[] heldCardObjects; 
     // Index to track which card is currently visible
     [SerializeField] private int currentCardIndex = 0;
     [SerializeField] private GameObject fpsPlayer;
