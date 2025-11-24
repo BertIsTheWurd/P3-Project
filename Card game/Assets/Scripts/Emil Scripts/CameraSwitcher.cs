@@ -6,6 +6,8 @@ using UnityEngine.Serialization;
 
 public class CameraSwitcher : MonoBehaviour
 {
+    private GameManager gameManager;
+    
     // These events are the communication hooks.
     // Action<int> means the event broadcasts a message containing one integer value (the index).
     public static event Action<int> OnActiveCameraChanged;
@@ -28,6 +30,7 @@ public class CameraSwitcher : MonoBehaviour
     
     void Start()
     {
+        gameManager =  GameObject.Find("Game Manager").GetComponent<GameManager>();
         // Start in fixed camera mode
         ActivateCamera(currentCameraIndex);
         UpdateCardPlaceholder();
