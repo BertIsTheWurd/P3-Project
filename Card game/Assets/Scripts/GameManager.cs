@@ -11,10 +11,10 @@ public class GameManager : MonoBehaviour
     public int gridZ;
     public Transform gridStart, gridEnd;
     
-    public List<Card> playerDeck = new List<Card>();
-    public List<Card> playerHand = new List<Card>();
+    public List<GameObject> playerDeck = new List<GameObject>();
+    public List<GameObject> playerHand = new List<GameObject>();
     public Vector3[][] cardSlots;
-    public Card[][] playedCards;
+    public GameObject[][] playedCards;
     public bool[][] availableCardSlots;
     
     public int HandSize = 6;
@@ -28,11 +28,11 @@ public class GameManager : MonoBehaviour
         discardPile = GameObject.Find("Discard Pile").GetComponent<DiscardPile>();
         
         cardSlots = new Vector3[gridZ][];
-        playedCards = new Card[gridZ][];
+        playedCards = new GameObject[gridZ][];
         for (int i = 0; i < cardSlots.Length; i++)
         {
             cardSlots[i] = new Vector3[gridX];
-            playedCards[i] = new Card[gridX];
+            playedCards[i] = new GameObject[gridX];
         }
         
         float gridSizeX = gridEnd.position.x - gridStart.position.x;
@@ -68,14 +68,16 @@ public class GameManager : MonoBehaviour
         return null;
     }
     
+    //This currently only adds it to the DiscardPile list. Doesn't physically move it anywhere
     //Remember to remove the card from any other list/stack it might be a part of, when calling this
     public void DiscardCard(GameObject card)
     {
         discardPile.discardPile.Add(card);
     }
     
-    public void PlayCard(Card cardInfo, int gridSpotX, int gridSpotZ)
+    public void PlayCard(GameObject template, int gridSpotX, int gridSpotZ)
     {
+        Card cardInfo = template.GetComponent<Card>();
         Debug.Log("Playing card");
         GameObject card = cardPool.ReturnCard();
         
@@ -83,7 +85,7 @@ public class GameManager : MonoBehaviour
         cardInfo.CopyTo(cardData);
         
         card.transform.position = cardSlots[gridSpotZ][gridSpotX];
-        playedCards[gridSpotZ][gridSpotX] = cardData;
+        playedCards[gridSpotZ][gridSpotX] = card;
         card.SetActive(true);
     }
 }

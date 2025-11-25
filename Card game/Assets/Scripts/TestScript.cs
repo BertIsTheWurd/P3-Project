@@ -27,7 +27,7 @@ public class TestScript : MonoBehaviour
 
         if (Input.GetKeyDown(playCard))
         {
-            gameManager.PlayCard(testCard.GetComponent<Card>(), nextSpotX, nextSpotZ);
+            gameManager.PlayCard(testCard, nextSpotX, nextSpotZ);
 
                 nextSpotX++;
                 if (nextSpotX >= gameManager.gridX)
@@ -42,9 +42,13 @@ public class TestScript : MonoBehaviour
             gameManager.DebugCubes();
         }
 
-        //Move top card from Drawpile to Discardpile
+        //Move top card from Drawpile to Discardpile & Write general info about the card in debug
         if (Input.GetKeyDown(KeyCode.E))
         {
+            Card temp = drawPile.drawPile.Peek().GetComponent<Card>();
+            
+            Debug.Log("Info about drawn card:\n Card Name is: " + temp.name + "\n It's type is: " + temp.type + "\n Sprite Used: " + temp.cardImage + "\n Card is exit: " + temp.isCorrect);
+            
             gameManager.DiscardCard(drawPile.drawCard());
         }
     }
