@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 6394906166185129399}
   - component: {fileID: -8025674565955463268}
   m_Layer: 0
-  m_Name: Card
+  m_Name: Card Right (test)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -47,7 +47,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Card
   cardName: Turn Right
   type: 1
-  cardImage: {fileID: 21300000, guid: 3bcdeee1ad5ba9240b0d7fa9677beb99, type: 3}
+  cardImage: {fileID: 21300000, guid: f0474a52f6a4d4d23abaeb8b9ec8f0e0, type: 3}
   isCorrect: 0
 --- !u!212 &-8025674565955463268
 SpriteRenderer:

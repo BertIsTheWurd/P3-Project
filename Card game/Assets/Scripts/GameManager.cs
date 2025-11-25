@@ -73,6 +73,7 @@ public class GameManager : MonoBehaviour
     public void DiscardCard(GameObject card)
     {
         discardPile.discardPile.Add(card);
+        card.transform.position = discardPile.gameObject.transform.position;
     }
     
     public void PlayCard(GameObject template, int gridSpotX, int gridSpotZ)

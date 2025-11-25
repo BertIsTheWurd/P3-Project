@@ -47,7 +47,7 @@ public class TestScript : MonoBehaviour
         {
             Card temp = drawPile.drawPile.Peek().GetComponent<Card>();
             
-            Debug.Log("Info about drawn card:\n Card Name is: " + temp.name + "\n It's type is: " + temp.type + "\n Sprite Used: " + temp.cardImage + "\n Card is exit: " + temp.isCorrect);
+            Debug.Log("Info about drawn card:\n Card Name is: " + temp.cardName + "\n Its type is: " + temp.type + "\n Sprite Used: " + temp.cardImage + "\n Card is exit: " + temp.isCorrect);
             
             gameManager.DiscardCard(drawPile.drawCard());
         }
