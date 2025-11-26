@@ -6,19 +6,12 @@ using UnityEngine.Serialization;
 
 public class CameraSwitcher : MonoBehaviour
 {
-    private GameManager gameManager;
-    
     // These events are the communication hooks.
     // Action<int> means the event broadcasts a message containing one integer value (the index).
     public static event Action<int> OnActiveCameraChanged;
-    public static event Action<int> OnActiveCardChanged;
 
     [SerializeField] private CinemachineCamera[] cameras; // The 3 cameras
     [SerializeField] private CinemachineCamera fpsCamera;
-    // Array to hold all your card GameObjects
-    [SerializeField] private GameObject[] heldCardObjects; 
-    // Index to track which card is currently visible
-    [SerializeField] private int currentCardIndex = 0;
     [SerializeField] private GameObject fpsPlayer;
     
     [SerializeField] private Transform cardPlaceholder;
@@ -30,7 +23,6 @@ public class CameraSwitcher : MonoBehaviour
     
     void Start()
     {
-        gameManager =  GameObject.Find("Game Manager").GetComponent<GameManager>();
         // Start in fixed camera mode
         ActivateCamera(currentCameraIndex);
         UpdateCardPlaceholder();
