@@ -1,131 +1,307 @@
+
 using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 public class GameManager : MonoBehaviour
 {
-    private CardPool cardPool;
-    private DiscardPile discardPile;
-    
-    public int gridX;
-    public int gridZ;
-    public Transform gridStart, gridEnd;
-    
-    public List<GameObject> playerDeck = new List<GameObject>();
-    public List<GameObject> playerHand = new List<GameObject>();
-    public Vector3[][] cardSlots;
-    public GameObject[][] playedCards;
-    public bool[][] availableCardSlots;
-    
+    [Header("Grid Settings")]
+    public int gridX = 7; // columns (width)
+    public int gridZ = 5; // rows (height)
+    public GameObject gridSlotPrefab;
+    public Sprite gridSlotSprite;
+    public Transform gridCenter; // Optional center point
+
+    [Header("Card Data")]
+    public DirectionalCardData startCardData;
+    public DirectionalCardData correctEndCardData;
+    public DirectionalCardData wrongEndCardData;
+
+    [Header("References")]
+    public CardPool cardPool;
+    public DrawPile drawPile;
+    public DiscardPile discardPile;
+    public CardsInHandController handController;
+    public GameObject[,] playedCards;
+    public Vector3[,] cardSlots;
+    private GameObject[,] gridSlotObjects;
+
+    [Header("Player Settings")]
     public int HandSize = 6;
-    
-    //Python Listener stuff
+
+    [Header("UDP Listener")]
     private UdpClient udpClient;
-    public int port = 5005; // Must match sender
+    public int port = 5005;
     public bool lookingAway = false;
 
+    private int correctEndRow = -1;
 
-    //Debug Stuff
-    public GameObject TestingCube;
-
-    public void Start()
+    private void Start()
     {
-        cardPool = GameObject.Find("Card Pool").GetComponent<CardPool>();
-        discardPile = GameObject.Find("Discard Pile").GetComponent<DiscardPile>();
-        
-        cardSlots = new Vector3[gridZ][];
-        playedCards = new GameObject[gridZ][];
-        for (int i = 0; i < cardSlots.Length; i++)
-        {
-            cardSlots[i] = new Vector3[gridX];
-            playedCards[i] = new GameObject[gridX];
-        }
-        
-        float gridSizeX = gridEnd.position.x - gridStart.position.x;
-        float gridSizeZ = gridEnd.position.z - gridStart.position.z;
+        playedCards = new GameObject[gridZ, gridX];
+        cardSlots = new Vector3[gridZ, gridX];
+        gridSlotObjects = new GameObject[gridZ, gridX];
 
-        float cardSpaceX = gridSizeX / gridX;
-        float cardSpaceZ = gridSizeZ / gridZ;
-        
-        //Distributes Spaces based on grid size & gridStart/End
-        for (int i = 0; i < cardSlots.Length; i++)
-        {
-            for (int j = 0; j < cardSlots[i].Length; j++)
-            {
-                cardSlots[i][j] = new Vector3(gridStart.position.x + cardSpaceX * j, gridStart.position.y, gridStart.position.z + cardSpaceZ * i);
-            }
-        }
+        CreateGridSlots();
+        PlaceStartAndEndCards();
+        StartCoroutine(InitializeGameAfterCardPool());
+    }
+
+    private System.Collections.IEnumerator InitializeGameAfterCardPool()
+    {
+        yield return null;
+        drawPile.Initialize(cardPool.cards);
+        DrawUntilFullHand();
+
         udpClient = new UdpClient(port);
         udpClient.BeginReceive(ReceiveCallback, null);
         Debug.Log("UDP Listener started on port " + port);
     }
 
-    public void DebugCubes()
+    /// <summary>
+    /// Creates a centered grid based on sprite size.
+    /// </summary>
+    private void CreateGridSlots()
     {
-        for (int i = 0; i < cardSlots.Length; i++)
+        float slotWidth = gridSlotSprite.bounds.size.x * gridSlotPrefab.transform.localScale.x;
+        float slotHeight = gridSlotSprite.bounds.size.y * gridSlotPrefab.transform.localScale.y;
+
+        float offsetX = (gridX - 1) * slotWidth / 2f;
+        float offsetZ = (gridZ - 1) * slotHeight / 2f;
+
+        Vector3 center = gridCenter != null ? gridCenter.position : Vector3.zero;
+
+        for (int row = 0; row < gridZ; row++) // rows (Z-axis)
         {
-            for (int j = 0; j < cardSlots[i].Length; j++)
+            for (int col = 0; col < gridX; col++) // columns (X-axis)
             {
-                Instantiate(TestingCube, cardSlots[i][j], Quaternion.identity);
+                Vector3 pos = new Vector3(
+                    center.x + (col * slotWidth) - offsetX,
+                    center.y,
+                    center.z + (row * slotHeight) - offsetZ
+                );
+
+                var slot = Instantiate(gridSlotPrefab, pos, Quaternion.Euler(90, 0, 0));
+                slot.tag = "GridSlot";
+
+                if (slot.GetComponent<GridSlot>() == null)
+                    slot.AddComponent<GridSlot>();
+
+                var gridSlot = slot.GetComponent<GridSlot>();
+                if (gridSlot != null && gridSlotSprite != null)
+                    gridSlot.emptySlotSprite = gridSlotSprite;
+
+                gridSlotObjects[row, col] = slot;
+                cardSlots[row, col] = pos;
             }
         }
     }
-    
-    public GameObject DrawToMax()
+
+    private void PlaceStartAndEndCards()
     {
-        Debug.Log("Drawing to max");
-        return null;
+        // Start card: middle row, first column
+        var startCardObj = cardPool.CreateSpecialCard(startCardData);
+        startCardObj.transform.position = cardSlots[gridZ / 2, 0];
+        startCardObj.transform.rotation = Quaternion.Euler(90, 0, 0);
+        startCardObj.SetActive(true);
+        playedCards[gridZ / 2, 0] = startCardObj;
+        gridSlotObjects[gridZ / 2, 0]?.GetComponent<GridSlot>()?.ShowAsOccupied();
+
+        // End cards: last column, rows 1, 3, 5
+        int[] endRows = { 0, 2, 4 }; // rows 1, 3, 5
+        int endColumn = gridX - 1;
+        correctEndRow = endRows[UnityEngine.Random.Range(0, endRows.Length)];
+
+        foreach (int row in endRows)
+        {
+            DirectionalCardData endData = (row == correctEndRow) ? correctEndCardData : wrongEndCardData;
+            var endCardObj = cardPool.CreateSpecialCard(endData);
+            endCardObj.transform.position = cardSlots[row, endColumn];
+            endCardObj.transform.rotation = Quaternion.Euler(90, 0, 0);
+            endCardObj.SetActive(true);
+            playedCards[row, endColumn] = endCardObj;
+            gridSlotObjects[row, endColumn]?.GetComponent<GridSlot>()?.ShowAsOccupied();
+        }
+
+        Debug.Log($"Correct end is at row {correctEndRow}");
     }
-    
-    //This currently only adds it to the DiscardPile list. Doesn't physically move it anywhere
-    //Remember to remove the card from any other list/stack it might be a part of, when calling this
+
+    public void DrawUntilFullHand()
+    {
+        while (handController.HandCount < HandSize)
+        {
+            var card = drawPile.DrawCard();
+            if (card == null)
+            {
+                Debug.Log("No more cards to draw!");
+                break;
+            }
+            handController.AddCardToHand(card);
+        }
+    }
+
     public void DiscardCard(GameObject card)
     {
-        discardPile.discardPile.Add(card);
-        card.transform.position = discardPile.gameObject.transform.position;
+        discardPile.AddToDiscard(card);
     }
-    
-    public void PlayCard(GameObject template, int gridSpotX, int gridSpotZ)
+
+    public bool CanPlaceCard(int x, int z, DirectionalCardData newCard)
     {
-        Card cardInfo = template.GetComponent<Card>();
-        Debug.Log("Playing card");
-        GameObject card = cardPool.ReturnCard();
-        
-        Card cardData = card.GetComponent<Card>();
-        cardInfo.CopyTo(cardData);
-        
-        card.transform.position = cardSlots[gridSpotZ][gridSpotX];
-        playedCards[gridSpotZ][gridSpotX] = card;
-        card.SetActive(true);
+        if (playedCards[z, x] != null) return false;
+        if ((z == gridZ / 2 && x == 0) ||
+            (x == gridX - 1 && (z == 0 || z == 2 || z == 4))) return false;
+
+        bool hasAdjacentCard = false;
+
+        if (z > 0 && playedCards[z - 1, x] != null)
+        {
+            hasAdjacentCard = true;
+            var neighbor = playedCards[z - 1, x].GetComponent<Card>();
+            if (neighbor.ConnectsDown != newCard.connectsUp) return false;
+        }
+        if (z < gridZ - 1 && playedCards[z + 1, x] != null)
+        {
+            hasAdjacentCard = true;
+            var neighbor = playedCards[z + 1, x].GetComponent<Card>();
+            if (neighbor.ConnectsUp != newCard.connectsDown) return false;
+        }
+        if (x > 0 && playedCards[z, x - 1] != null)
+        {
+            hasAdjacentCard = true;
+            var neighbor = playedCards[z, x - 1].GetComponent<Card>();
+            if (neighbor.ConnectsRight != newCard.connectsLeft) return false;
+        }
+        if (x < gridX - 1 && playedCards[z, x + 1] != null)
+        {
+            hasAdjacentCard = true;
+            var neighbor = playedCards[z, x + 1].GetComponent<Card>();
+            if (neighbor.ConnectsLeft != newCard.connectsRight) return false;
+        }
+
+        return hasAdjacentCard;
     }
-    //Python listener bool
+
+    public void PlayCard(GameObject cardObj, int x, int z)
+    {
+        var card = cardObj.GetComponent<Card>();
+        if (!CanPlaceCard(x, z, card.cardData))
+        {
+            Debug.Log("Invalid placement: path does not connect or no adjacent cards.");
+            return;
+        }
+
+        handController.RemoveCardFromHand(cardObj);
+        cardObj.transform.SetParent(null);
+        cardObj.transform.position = cardSlots[z, x];
+        cardObj.transform.rotation = Quaternion.Euler(90, 0, 0);
+        cardObj.transform.localScale = Vector3.one;
+        cardObj.tag = "PlayedCard";
+        cardObj.SetActive(true);
+        playedCards[z, x] = cardObj;
+        gridSlotObjects[z, x]?.GetComponent<GridSlot>()?.ShowAsOccupied();
+
+        DrawUntilFullHand();
+
+        var pathResult = ValidatePath();
+        if (pathResult.isComplete)
+        {
+            if (pathResult.isCorrect)
+            {
+                Debug.Log("🎉 Path complete! You found the CORRECT exit!");
+                OnVictory();
+            }
+            else
+            {
+                Debug.Log("❌ Path complete, but this is the WRONG exit!");
+                OnWrongExit();
+            }
+        }
+    }
+
+    private (bool isComplete, bool isCorrect) ValidatePath()
+    {
+        int startZ = gridZ / 2;
+        int startX = 0;
+        if (playedCards[startZ, startX] == null) return (false, false);
+
+        HashSet<(int z, int x)> visited = new HashSet<(int, int)>();
+        Queue<(int z, int x)> queue = new Queue<(int, int)>();
+        queue.Enqueue((startZ, startX));
+
+        while (queue.Count > 0)
+        {
+            var (z, x) = queue.Dequeue();
+            if (visited.Contains((z, x))) continue;
+            visited.Add((z, x));
+
+            var currentCard = playedCards[z, x].GetComponent<Card>();
+            if (x == gridX - 1 && currentCard.cardData.isEnd)
+            {
+                bool isCorrect = (z == correctEndRow);
+                return (true, isCorrect);
+            }
+
+            if (currentCard.ConnectsUp && z > 0 && playedCards[z - 1, x] != null)
+            {
+                var neighbor = playedCards[z - 1, x].GetComponent<Card>();
+                if (neighbor.ConnectsDown) queue.Enqueue((z - 1, x));
+            }
+            if (currentCard.ConnectsDown && z < gridZ - 1 && playedCards[z + 1, x] != null)
+            {
+                var neighbor = playedCards[z + 1, x].GetComponent<Card>();
+                if (neighbor.ConnectsUp) queue.Enqueue((z + 1, x));
+            }
+            if (currentCard.ConnectsLeft && x > 0 && playedCards[z, x - 1] != null)
+            {
+                var neighbor = playedCards[z, x - 1].GetComponent<Card>();
+                if (neighbor.ConnectsRight) queue.Enqueue((z, x - 1));
+            }
+            if (currentCard.ConnectsRight && x < gridX - 1 && playedCards[z, x + 1] != null)
+            {
+                var neighbor = playedCards[z, x + 1].GetComponent<Card>();
+                if (neighbor.ConnectsLeft) queue.Enqueue((z, x + 1));
+            }
+        }
+
+        return (false, false);
+    }
+
+    private void OnVictory() => enabled = false;
+    private void OnWrongExit() { }
+
     private void ReceiveCallback(IAsyncResult ar)
     {
-        IPEndPoint ip = new IPEndPoint(IPAddress.Any, port);
-        byte[] bytes = udpClient.EndReceive(ar, ref ip);
-        string message = Encoding.UTF8.GetString(bytes);
-
-        if (message == "LOOKING_AWAY")
+        try
         {
-            lookingAway = true;
-            Debug.Log("lookingAway = TRUE");
+            IPEndPoint ip = new IPEndPoint(IPAddress.Any, port);
+            byte[] bytes = udpClient.EndReceive(ar, ref ip);
+            string message = Encoding.UTF8.GetString(bytes);
+            if (message == "LOOKING_AWAY")
+            {
+                lookingAway = true;
+                Debug.Log("👁️ lookingAway = TRUE");
+            }
+            else if (message == "LOOKING")
+            {
+                lookingAway = false;
+                Debug.Log("👁️ lookingAway = FALSE");
+            }
+            udpClient.BeginReceive(ReceiveCallback, null);
         }
-        else if (message == "LOOKING")
+        catch (Exception e)
         {
-            lookingAway = false;
-            Debug.Log("lookingAway = FALSE");
+            Debug.LogError($"UDP Error: {e.Message}");
         }
-
-        // Keep listening
-        udpClient.BeginReceive(ReceiveCallback, null);
     }
-    
-    void OnApplicationQuit()
+
+    private void OnApplicationQuit()
     {
-        udpClient.Close();
+        if (udpClient != null)
+        {
+            udpClient.Close();
+        }
     }
 }
