@@ -1,4 +1,3 @@
-
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -9,8 +8,8 @@ using UnityEngine;
 public class GameManager : MonoBehaviour
 {
     [Header("Grid Settings")]
-    public int gridX = 7; // columns (width)
-    public int gridZ = 5; // rows (height)
+    public int gridX = 5; // rows (height) - set to 5 in inspector
+    public int gridZ = 7; // columns (width) - set to 7 in inspector
     public GameObject gridSlotPrefab;
     public Sprite gridSlotSprite;
     public Transform gridCenter; // Optional center point
@@ -41,9 +40,9 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        playedCards = new GameObject[gridZ, gridX];
-        cardSlots = new Vector3[gridZ, gridX];
-        gridSlotObjects = new GameObject[gridZ, gridX];
+        playedCards = new GameObject[gridX, gridZ];
+        cardSlots = new Vector3[gridX, gridZ];
+        gridSlotObjects = new GameObject[gridX, gridZ];
 
         CreateGridSlots();
         PlaceStartAndEndCards();
@@ -61,27 +60,26 @@ public class GameManager : MonoBehaviour
         Debug.Log("UDP Listener started on port " + port);
     }
 
-    /// <summary>
-    /// Creates a centered grid based on sprite size.
-    /// </summary>
     private void CreateGridSlots()
     {
         float slotWidth = gridSlotSprite.bounds.size.x * gridSlotPrefab.transform.localScale.x;
         float slotHeight = gridSlotSprite.bounds.size.y * gridSlotPrefab.transform.localScale.y;
 
-        float offsetX = (gridX - 1) * slotWidth / 2f;
-        float offsetZ = (gridZ - 1) * slotHeight / 2f;
+        // gridX=5 (rows), gridZ=7 (columns)
+        // We want 7 wide (left-right), 5 tall (top-bottom)
+        float offsetX = (gridZ - 1) * slotWidth / 2f;   // gridZ=7 for width
+        float offsetZ = (gridX - 1) * slotHeight / 2f;  // gridX=5 for height
 
         Vector3 center = gridCenter != null ? gridCenter.position : Vector3.zero;
 
-        for (int row = 0; row < gridZ; row++) // rows (Z-axis)
+        for (int row = 0; row < gridX; row++) // 5 rows
         {
-            for (int col = 0; col < gridX; col++) // columns (X-axis)
+            for (int col = 0; col < gridZ; col++) // 7 columns
             {
                 Vector3 pos = new Vector3(
-                    center.x + (col * slotWidth) - offsetX,
+                    center.x + (col * slotWidth) - offsetX,      // col controls X (left-right)
                     center.y,
-                    center.z + (row * slotHeight) - offsetZ
+                    center.z + (row * slotHeight) - offsetZ      // row controls Z (top-bottom)
                 );
 
                 var slot = Instantiate(gridSlotPrefab, pos, Quaternion.Euler(90, 0, 0));
@@ -102,17 +100,24 @@ public class GameManager : MonoBehaviour
 
     private void PlaceStartAndEndCards()
     {
-        // Start card: middle row, first column
+        // Array is [row, col] where row is 0-4 (gridX=5) and col is 0-6 (gridZ=7)
+        // Start: middle row (2 of 5), leftmost column (0 of 7)
+        // End: top/middle/bottom rows (0,2,4 of 5), rightmost column (6 of 7)
+        
+        int startRow = gridX / 2;  // = 2 (middle of 5 rows)
+        int startCol = 0;           // = 0 (leftmost of 7 columns)
+        
         var startCardObj = cardPool.CreateSpecialCard(startCardData);
-        startCardObj.transform.position = cardSlots[gridZ / 2, 0];
+        startCardObj.transform.position = cardSlots[startRow, startCol];
         startCardObj.transform.rotation = Quaternion.Euler(90, 0, 0);
         startCardObj.SetActive(true);
-        playedCards[gridZ / 2, 0] = startCardObj;
-        gridSlotObjects[gridZ / 2, 0]?.GetComponent<GridSlot>()?.ShowAsOccupied();
+        playedCards[startRow, startCol] = startCardObj;
+        gridSlotObjects[startRow, startCol]?.GetComponent<GridSlot>()?.ShowAsOccupied();
+        
+        Debug.Log($"Start card placed at row {startRow}, col {startCol}");
 
-        // End cards: last column, rows 1, 3, 5
-        int[] endRows = { 0, 2, 4 }; // rows 1, 3, 5
-        int endColumn = gridX - 1;
+        int[] endRows = { 0, 2, 4 };  // Top, middle, bottom of 5 rows
+        int endColumn = gridZ - 1;     // = 6 (rightmost of 7 columns)
         correctEndRow = endRows[UnityEngine.Random.Range(0, endRows.Length)];
 
         foreach (int row in endRows)
@@ -124,6 +129,8 @@ public class GameManager : MonoBehaviour
             endCardObj.SetActive(true);
             playedCards[row, endColumn] = endCardObj;
             gridSlotObjects[row, endColumn]?.GetComponent<GridSlot>()?.ShowAsOccupied();
+            
+            Debug.Log($"End card placed at row {row}, col {endColumn}");
         }
 
         Debug.Log($"Correct end is at row {correctEndRow}");
@@ -150,19 +157,24 @@ public class GameManager : MonoBehaviour
 
     public bool CanPlaceCard(int x, int z, DirectionalCardData newCard)
     {
+        // x is col (0-6), z is row (0-4)
         if (playedCards[z, x] != null) return false;
-        if ((z == gridZ / 2 && x == 0) ||
-            (x == gridX - 1 && (z == 0 || z == 2 || z == 4))) return false;
+        
+        // Start card: middle row (gridX/2), first column (0)
+        // End cards: last column (gridZ-1), rows 0, 2, 4
+        if ((z == gridX / 2 && x == 0) ||
+            (x == gridZ - 1 && (z == 0 || z == 2 || z == 4))) return false;
 
         bool hasAdjacentCard = false;
 
+        // z is row, x is col
         if (z > 0 && playedCards[z - 1, x] != null)
         {
             hasAdjacentCard = true;
             var neighbor = playedCards[z - 1, x].GetComponent<Card>();
             if (neighbor.ConnectsDown != newCard.connectsUp) return false;
         }
-        if (z < gridZ - 1 && playedCards[z + 1, x] != null)
+        if (z < gridX - 1 && playedCards[z + 1, x] != null)
         {
             hasAdjacentCard = true;
             var neighbor = playedCards[z + 1, x].GetComponent<Card>();
@@ -174,7 +186,7 @@ public class GameManager : MonoBehaviour
             var neighbor = playedCards[z, x - 1].GetComponent<Card>();
             if (neighbor.ConnectsRight != newCard.connectsLeft) return false;
         }
-        if (x < gridX - 1 && playedCards[z, x + 1] != null)
+        if (x < gridZ - 1 && playedCards[z, x + 1] != null)
         {
             hasAdjacentCard = true;
             var neighbor = playedCards[z, x + 1].GetComponent<Card>();
@@ -223,8 +235,8 @@ public class GameManager : MonoBehaviour
 
     private (bool isComplete, bool isCorrect) ValidatePath()
     {
-        int startZ = gridZ / 2;
-        int startX = 0;
+        int startZ = gridX / 2;  // middle row
+        int startX = 0;           // first column
         if (playedCards[startZ, startX] == null) return (false, false);
 
         HashSet<(int z, int x)> visited = new HashSet<(int, int)>();
@@ -238,7 +250,7 @@ public class GameManager : MonoBehaviour
             visited.Add((z, x));
 
             var currentCard = playedCards[z, x].GetComponent<Card>();
-            if (x == gridX - 1 && currentCard.cardData.isEnd)
+            if (x == gridZ - 1 && currentCard.cardData.isEnd)  // last column
             {
                 bool isCorrect = (z == correctEndRow);
                 return (true, isCorrect);
@@ -249,7 +261,7 @@ public class GameManager : MonoBehaviour
                 var neighbor = playedCards[z - 1, x].GetComponent<Card>();
                 if (neighbor.ConnectsDown) queue.Enqueue((z - 1, x));
             }
-            if (currentCard.ConnectsDown && z < gridZ - 1 && playedCards[z + 1, x] != null)
+            if (currentCard.ConnectsDown && z < gridX - 1 && playedCards[z + 1, x] != null)
             {
                 var neighbor = playedCards[z + 1, x].GetComponent<Card>();
                 if (neighbor.ConnectsUp) queue.Enqueue((z + 1, x));
@@ -259,7 +271,7 @@ public class GameManager : MonoBehaviour
                 var neighbor = playedCards[z, x - 1].GetComponent<Card>();
                 if (neighbor.ConnectsRight) queue.Enqueue((z, x - 1));
             }
-            if (currentCard.ConnectsRight && x < gridX - 1 && playedCards[z, x + 1] != null)
+            if (currentCard.ConnectsRight && x < gridZ - 1 && playedCards[z, x + 1] != null)
             {
                 var neighbor = playedCards[z, x + 1].GetComponent<Card>();
                 if (neighbor.ConnectsLeft) queue.Enqueue((z, x + 1));
