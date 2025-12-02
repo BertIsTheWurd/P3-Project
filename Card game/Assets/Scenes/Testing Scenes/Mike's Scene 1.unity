@@ -171,42 +171,15 @@ PrefabInstance:
       propertyPath: m_Name
       value: Office
       objectReference: {fileID: 0}
+    - target: {fileID: 8452196686265539180, guid: 5b6a33ca0da1c46fbb612e432cf27ea7, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 5b6a33ca0da1c46fbb612e432cf27ea7, type: 3}
---- !u!1 &337024029
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 337024030}
-  m_Layer: 0
-  m_Name: Player Deck
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &337024030
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 337024029}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &374722152
 GameObject:
   m_ObjectHideFlags: 0
@@ -250,9 +223,9 @@ Transform:
   m_GameObject: {fileID: 374722152}
   serializedVersion: 2
   m_LocalRotation: {x: 0.6963643, y: 0.122787856, z: -0.122787856, w: 0.6963643}
-  m_LocalPosition: {x: 7, y: 0, z: -2}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalPosition: {x: 4, y: 0, z: -2}
+  m_LocalScale: {x: 0.25, y: 0.25, z: 0.25}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: -20}
@@ -300,6 +273,7 @@ MonoBehaviour:
   HandSize: 6
   port: 5005
   lookingAway: 0
+  lastPlayedCard: {fileID: 0}
 --- !u!4 &536226666
 Transform:
   m_ObjectHideFlags: 0
@@ -463,8 +437,8 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 5, y: 0, z: -0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -646,7 +620,7 @@ Transform:
   m_GameObject: {fileID: 982864028}
   serializedVersion: 2
   m_LocalRotation: {x: 0.19979136, y: -0, z: -0, w: 0.9798385}
-  m_LocalPosition: {x: 0, y: 6.02, z: -12}
+  m_LocalPosition: {x: 0, y: 3, z: -6}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -810,7 +784,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DrawPile
   discardPile: {fileID: 374722153}
   drawAnchor: {fileID: 1576927272}
-  cardStackOffset: 0.01
+  cardStackOffsetZ: -0.05
+  cardStackOffsetY: 0.02
   showDrawPile: 1
 --- !u!4 &1576927272
 Transform:
@@ -821,8 +796,8 @@ Transform:
   m_GameObject: {fileID: 1576927270}
   serializedVersion: 2
   m_LocalRotation: {x: 0.6963643, y: 0.122787856, z: -0.122787856, w: 0.6963643}
-  m_LocalPosition: {x: 6, y: 0, z: -2}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_LocalPosition: {x: 3, y: 0, z: -2}
+  m_LocalScale: {x: 0.25, y: 0.25, z: 0.25}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
@@ -860,10 +835,10 @@ MonoBehaviour:
   currentCardIndex: -1
   handPlaceHolder: {fileID: 1708531459}
   cardSpacing: 3
-  fanRadius: 10
-  fanAngle: 35
+  fanRadius: 12
+  fanAngle: 40
   handCardScale: {x: 0.5, y: 0.5, z: 0.5}
-  handCardRotation: {x: 0, y: 0, z: 0}
+  handCardRotation: {x: -0.5, y: 0, z: 0}
   selectedCardYOffset: 0.5
   selectedCardScaleMultiplier: 1.1
   selectedCardTint: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
@@ -877,8 +852,8 @@ Transform:
   m_GameObject: {fileID: 1708531457}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -6}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -3}
+  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
@@ -922,7 +897,6 @@ SceneRoots:
   - {fileID: 910361283}
   - {fileID: 1576927272}
   - {fileID: 982864032}
-  - {fileID: 337024030}
   - {fileID: 1022027658}
   - {fileID: 536226666}
   - {fileID: 605132971}

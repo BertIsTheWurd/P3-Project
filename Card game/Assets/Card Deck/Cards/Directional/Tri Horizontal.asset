@@ -14,8 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DirectionalCardData
   cardName: Tri Horizontal
   cardImage: {fileID: 21300000, guid: f6e3cf1378f2a432f9b1fb013a826e2e, type: 3}
+  cardBackside: {fileID: 21300000, guid: ae364a75a8013417aaf14c767bc5134e, type: 3}
   isStart: 0
   isEnd: 0
+  isCorrect: 0
   specialCard: 0
   connectsUp: 1
   connectsDown: 0

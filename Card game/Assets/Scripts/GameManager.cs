@@ -37,6 +37,10 @@ public class GameManager : MonoBehaviour
     public bool lookingAway = false;
 
     private int correctEndRow = -1;
+    
+    // Track last played card and all card positions
+    public GameObject lastPlayedCard;
+    private Dictionary<GameObject, Vector2Int> cardPositions = new Dictionary<GameObject, Vector2Int>();
 
     private void Start()
     {
@@ -112,6 +116,7 @@ public class GameManager : MonoBehaviour
         startCardObj.transform.rotation = Quaternion.Euler(90, 0, 0);
         startCardObj.SetActive(true);
         playedCards[startRow, startCol] = startCardObj;
+        cardPositions[startCardObj] = new Vector2Int(startCol, startRow);
         gridSlotObjects[startRow, startCol]?.GetComponent<GridSlot>()?.ShowAsOccupied();
         
         Debug.Log($"Start card placed at row {startRow}, col {startCol}");
@@ -128,6 +133,7 @@ public class GameManager : MonoBehaviour
             endCardObj.transform.rotation = Quaternion.Euler(90, 0, 0);
             endCardObj.SetActive(true);
             playedCards[row, endColumn] = endCardObj;
+            cardPositions[endCardObj] = new Vector2Int(endColumn, row);
             gridSlotObjects[row, endColumn]?.GetComponent<GridSlot>()?.ShowAsOccupied();
             
             Debug.Log($"End card placed at row {row}, col {endColumn}");
@@ -155,51 +161,98 @@ public class GameManager : MonoBehaviour
         discardPile.AddToDiscard(card);
     }
 
-    public bool CanPlaceCard(int x, int z, DirectionalCardData newCard)
+    public bool CanPlaceCard(int col, int row, DirectionalCardData newCard)
     {
-        // x is col (0-6), z is row (0-4)
-        if (playedCards[z, x] != null) return false;
+        // col is 0-6 (gridZ), row is 0-4 (gridX)
+        Debug.Log($"Checking placement at row {row}, col {col}");
+        
+        // Check bounds
+        if (row < 0 || row >= gridX || col < 0 || col >= gridZ)
+        {
+            Debug.Log("Out of bounds");
+            return false;
+        }
+        
+        // Check if slot is occupied
+        if (playedCards[row, col] != null)
+        {
+            Debug.Log("Slot already occupied");
+            return false;
+        }
         
         // Start card: middle row (gridX/2), first column (0)
         // End cards: last column (gridZ-1), rows 0, 2, 4
-        if ((z == gridX / 2 && x == 0) ||
-            (x == gridZ - 1 && (z == 0 || z == 2 || z == 4))) return false;
+        if ((row == gridX / 2 && col == 0) ||
+            (col == gridZ - 1 && (row == 0 || row == 2 || row == 4)))
+        {
+            Debug.Log("Cannot place on start/end positions");
+            return false;
+        }
 
         bool hasAdjacentCard = false;
 
-        // z is row, x is col
-        if (z > 0 && playedCards[z - 1, x] != null)
+        // Check up (row - 1)
+        if (row > 0 && playedCards[row - 1, col] != null)
         {
             hasAdjacentCard = true;
-            var neighbor = playedCards[z - 1, x].GetComponent<Card>();
-            if (neighbor.ConnectsDown != newCard.connectsUp) return false;
+            var neighbor = playedCards[row - 1, col].GetComponent<Card>();
+            if (neighbor.ConnectsDown != newCard.connectsUp)
+            {
+                Debug.Log("Up connection mismatch");
+                return false;
+            }
         }
-        if (z < gridX - 1 && playedCards[z + 1, x] != null)
+        
+        // Check down (row + 1)
+        if (row < gridX - 1 && playedCards[row + 1, col] != null)
         {
             hasAdjacentCard = true;
-            var neighbor = playedCards[z + 1, x].GetComponent<Card>();
-            if (neighbor.ConnectsUp != newCard.connectsDown) return false;
+            var neighbor = playedCards[row + 1, col].GetComponent<Card>();
+            if (neighbor.ConnectsUp != newCard.connectsDown)
+            {
+                Debug.Log("Down connection mismatch");
+                return false;
+            }
         }
-        if (x > 0 && playedCards[z, x - 1] != null)
+        
+        // Check left (col - 1)
+        if (col > 0 && playedCards[row, col - 1] != null)
         {
             hasAdjacentCard = true;
-            var neighbor = playedCards[z, x - 1].GetComponent<Card>();
-            if (neighbor.ConnectsRight != newCard.connectsLeft) return false;
+            var neighbor = playedCards[row, col - 1].GetComponent<Card>();
+            if (neighbor.ConnectsRight != newCard.connectsLeft)
+            {
+                Debug.Log("Left connection mismatch");
+                return false;
+            }
         }
-        if (x < gridZ - 1 && playedCards[z, x + 1] != null)
+        
+        // Check right (col + 1)
+        if (col < gridZ - 1 && playedCards[row, col + 1] != null)
         {
             hasAdjacentCard = true;
-            var neighbor = playedCards[z, x + 1].GetComponent<Card>();
-            if (neighbor.ConnectsLeft != newCard.connectsRight) return false;
+            var neighbor = playedCards[row, col + 1].GetComponent<Card>();
+            if (neighbor.ConnectsLeft != newCard.connectsRight)
+            {
+                Debug.Log("Right connection mismatch");
+                return false;
+            }
         }
 
+        if (!hasAdjacentCard)
+        {
+            Debug.Log("No adjacent cards found");
+        }
+        
         return hasAdjacentCard;
     }
 
-    public void PlayCard(GameObject cardObj, int x, int z)
+    public void PlayCard(GameObject cardObj, int col, int row)
     {
         var card = cardObj.GetComponent<Card>();
-        if (!CanPlaceCard(x, z, card.cardData))
+        Debug.Log($"Attempting to play card at row {row}, col {col}");
+        
+        if (!CanPlaceCard(col, row, card.cardData))
         {
             Debug.Log("Invalid placement: path does not connect or no adjacent cards.");
             return;
@@ -207,14 +260,21 @@ public class GameManager : MonoBehaviour
 
         handController.RemoveCardFromHand(cardObj);
         cardObj.transform.SetParent(null);
-        cardObj.transform.position = cardSlots[z, x];
+        cardObj.transform.position = cardSlots[row, col];
         cardObj.transform.rotation = Quaternion.Euler(90, 0, 0);
         cardObj.transform.localScale = Vector3.one;
         cardObj.tag = "PlayedCard";
         cardObj.SetActive(true);
-        playedCards[z, x] = cardObj;
-        gridSlotObjects[z, x]?.GetComponent<GridSlot>()?.ShowAsOccupied();
+        playedCards[row, col] = cardObj;
+        
+        // Store position and track as last played card
+        cardPositions[cardObj] = new Vector2Int(col, row);
+        lastPlayedCard = cardObj;
+        
+        gridSlotObjects[row, col]?.GetComponent<GridSlot>()?.ShowAsOccupied();
 
+        Debug.Log($"Card successfully played at row {row}, col {col}");
+        
         DrawUntilFullHand();
 
         var pathResult = ValidatePath();
@@ -232,49 +292,78 @@ public class GameManager : MonoBehaviour
             }
         }
     }
+    
+    // Helper method to get a card's position
+    public Vector2Int? GetCardPosition(GameObject card)
+    {
+        if (cardPositions.ContainsKey(card))
+        {
+            return cardPositions[card];
+        }
+        return null;
+    }
+    
+    // Helper method to remove a card from the grid
+    public void RemoveCard(GameObject card)
+    {
+        if (cardPositions.ContainsKey(card))
+        {
+            Vector2Int pos = cardPositions[card];
+            playedCards[pos.y, pos.x] = null;
+            cardPositions.Remove(card);
+            gridSlotObjects[pos.y, pos.x]?.GetComponent<GridSlot>()?.ShowAsEmpty();
+            
+            if (lastPlayedCard == card)
+            {
+                lastPlayedCard = null;
+            }
+            
+            Debug.Log($"Removed card from row {pos.y}, col {pos.x}");
+        }
+    }
 
     private (bool isComplete, bool isCorrect) ValidatePath()
     {
-        int startZ = gridX / 2;  // middle row
-        int startX = 0;           // first column
-        if (playedCards[startZ, startX] == null) return (false, false);
+        int startRow = gridX / 2;  // middle row
+        int startCol = 0;           // first column
+        if (playedCards[startRow, startCol] == null) return (false, false);
 
-        HashSet<(int z, int x)> visited = new HashSet<(int, int)>();
-        Queue<(int z, int x)> queue = new Queue<(int, int)>();
-        queue.Enqueue((startZ, startX));
+        HashSet<(int row, int col)> visited = new HashSet<(int, int)>();
+        Queue<(int row, int col)> queue = new Queue<(int, int)>();
+        queue.Enqueue((startRow, startCol));
 
         while (queue.Count > 0)
         {
-            var (z, x) = queue.Dequeue();
-            if (visited.Contains((z, x))) continue;
-            visited.Add((z, x));
+            var (row, col) = queue.Dequeue();
+            if (visited.Contains((row, col))) continue;
+            visited.Add((row, col));
 
-            var currentCard = playedCards[z, x].GetComponent<Card>();
-            if (x == gridZ - 1 && currentCard.cardData.isEnd)  // last column
+            var currentCard = playedCards[row, col].GetComponent<Card>();
+            if (col == gridZ - 1 && currentCard.cardData.isEnd)  // last column
             {
-                bool isCorrect = (z == correctEndRow);
+                bool isCorrect = (row == correctEndRow);
                 return (true, isCorrect);
             }
 
-            if (currentCard.ConnectsUp && z > 0 && playedCards[z - 1, x] != null)
+            if (currentCard.ConnectsUp && row > 0 && playedCards[row - 1, col] != null)
             {
-                var neighbor = playedCards[z - 1, x].GetComponent<Card>();
-                if (neighbor.ConnectsDown) queue.Enqueue((z - 1, x));
+                var neighbor = playedCards[row - 1, col].GetComponent<Card>();
+                if (neighbor.ConnectsDown) queue.Enqueue((row - 1, col));
             }
-            if (currentCard.ConnectsDown && z < gridX - 1 && playedCards[z + 1, x] != null)
+            if (currentCard.ConnectsDown && row < gridX - 1 && playedCards[row + 1, col] != null)
             {
-                var neighbor = playedCards[z + 1, x].GetComponent<Card>();
-                if (neighbor.ConnectsUp) queue.Enqueue((z + 1, x));
+                var neighbor = playedCards[row + 1, col].GetComponent<Card>();
+                if (neighbor.ConnectsUp) queue.Enqueue((row + 1, col));
             }
-            if (currentCard.ConnectsLeft && x > 0 && playedCards[z, x - 1] != null)
+            if (currentCard.ConnectsLeft && col > 0 && playedCards[row, col - 1] != null)
             {
-                var neighbor = playedCards[z, x - 1].GetComponent<Card>();
-                if (neighbor.ConnectsRight) queue.Enqueue((z, x - 1));
+                var neighbor = playedCards[row, col - 1].GetComponent<Card>();
+                if (neighbor.ConnectsRight) queue.Enqueue((row, col - 1));
             }
-            if (currentCard.ConnectsRight && x < gridZ - 1 && playedCards[z, x + 1] != null)
+            if (currentCard.ConnectsRight && col < gridZ - 1 && playedCards[row, col + 1] != null)
             {
-                var neighbor = playedCards[z, x + 1].GetComponent<Card>();
-                if (neighbor.ConnectsLeft) queue.Enqueue((z, x + 1));
+                var neighbor = playedCards[row, col + 1].GetComponent<Card>();
+                if (neighbor.ConnectsLeft) queue.Enqueue((row, col + 1));
             }
         }
 

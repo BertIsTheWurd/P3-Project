@@ -4,6 +4,7 @@ using UnityEngine;
 public class DirectionalCardData : ScriptableObject {
     public string cardName;
     public Sprite cardImage;
+    public Sprite cardBackside;
     public bool isStart;
     public bool isEnd;
     public bool isCorrect;

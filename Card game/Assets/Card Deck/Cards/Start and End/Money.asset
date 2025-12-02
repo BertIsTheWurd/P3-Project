@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DirectionalCardData
   cardName: For the Money
   cardImage: {fileID: 21300000, guid: a07bb5228576144cdb1788d54150ecef, type: 3}
+  cardBackside: {fileID: 21300000, guid: ae364a75a8013417aaf14c767bc5134e, type: 3}
   isStart: 0
   isEnd: 1
   isCorrect: 0

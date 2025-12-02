@@ -1,42 +1,57 @@
 using UnityEngine;
 
-public class Card : MonoBehaviour {
+public class Card : MonoBehaviour
+{
     public DirectionalCardData cardData;
     private SpriteRenderer spriteRenderer;
-    
-    [Header("Card Back")]
-    public Sprite cardBackSprite; // Assign in prefab inspector
 
-    private void Awake() {
+    private void Awake()
+    {
         spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
-    private void OnEnable() {
-        UpdateSprite();
+    private void OnEnable()
+    {
+        UpdateAppearanceBasedOnTag();
     }
 
     // Call this whenever cardData changes
-    public void SetCardData(DirectionalCardData data) {
+    public void SetCardData(DirectionalCardData data)
+    {
         cardData = data;
-        UpdateSprite();
+        UpdateAppearanceBasedOnTag();
     }
 
-    private void UpdateSprite() {
-        if (cardData != null && spriteRenderer != null) {
+    private void UpdateSprite()
+    {
+        if (cardData != null && spriteRenderer != null)
+        {
             spriteRenderer.sprite = cardData.cardImage;
         }
     }
-    
+
     // Show the card back (for draw pile)
-    public void ShowCardBack() {
-        if (spriteRenderer != null && cardBackSprite != null) {
-            spriteRenderer.sprite = cardBackSprite;
+    public void ShowCardBack()
+    {
+        if (spriteRenderer != null && cardData != null && cardData.cardBackside != null)
+        {
+            spriteRenderer.sprite = cardData.cardBackside;
         }
     }
-    
+
     // Show the card front
-    public void ShowCardFront() {
+    public void ShowCardFront()
+    {
         UpdateSprite();
+    }
+
+    // Dynamic appearance based on tag
+    public void UpdateAppearanceBasedOnTag()
+    {
+        if (tag == "DrawPile")
+            ShowCardBack();
+        else
+            ShowCardFront();
     }
 
     public bool ConnectsUp => cardData.connectsUp;

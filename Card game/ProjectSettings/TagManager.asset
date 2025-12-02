@@ -7,6 +7,7 @@ TagManager:
   - CardInHand
   - GridSlot
   - DrawPile
+  - PlayedCard
   layers:
   - Default
   - TransparentFX
