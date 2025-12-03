@@ -11,22 +11,25 @@ public class CardsInHandController : MonoBehaviour {
     public Transform handPlaceHolder;
 
     [Header("Hand Visual Settings")]
-    public float cardSpacing = 0.3f; // Horizontal spacing between cards
-    public float fanRadius = 5f; // Radius of the arc
-    public float fanAngle = 30f; // Total angle spread of the fan (degrees)
-    public Vector3 handCardScale = Vector3.one; // Scale of cards in hand
-    public Vector3 handCardRotation = Vector3.zero; // Base rotation for cards in hand
+    public float cardSpacing = 0.3f;
+    public float fanRadius = 5f;
+    public float fanAngle = 30f;
+    public Vector3 handCardScale = Vector3.one;
+    public Vector3 handCardRotation = Vector3.zero;
 
     [Header("Selection Visual")]
-    public float selectedCardYOffset = 0.3f; // How much to move selected card forward
-    public float selectedCardScaleMultiplier = 1.2f; // Scale up selected card
-    public Color selectedCardTint = Color.yellow; // Tint for selected card
-    public float selectionAnimationSpeed = 10f; // Animation speed
+    public float selectedCardYOffset = 0.3f;
+    public float selectedCardScaleMultiplier = 1.2f;
+    public Color selectedCardTint = Color.yellow;
+    public float selectionAnimationSpeed = 10f;
 
     private Camera mainCamera;
     private GameManager gameManager;
     private GameObject currentlySelectedCard;
     private Color originalCardColor = Color.white;
+    private Vector3 targetPosition;
+    private Vector3 targetScale;
+    private bool isAnimatingSelection = false;
 
     public int HandCount => cardObjectsInHand.Count;
 
@@ -42,7 +45,9 @@ public class CardsInHandController : MonoBehaviour {
     void Update() {
         HandleCardSelection();
         HandleGridPlacement();
-        AnimateSelectedCard();
+        if (isAnimatingSelection) {
+            AnimateSelectedCard();
+        }
     }
 
     private void HandleCardSelection() {
@@ -55,11 +60,24 @@ public class CardsInHandController : MonoBehaviour {
                         SelectCard(index);
                     }
                 }
+                else if (hit.collider.CompareTag("GridSlot")) {
+                    // Don't deselect when clicking grid - let HandleGridPlacement handle it
+                }
+                else {
+                    // Deselect if clicking elsewhere
+                    DeselectCard();
+                }
             }
         }
     }
 
     private void SelectCard(int index) {
+        // If clicking the same card, deselect it
+        if (currentCardIndex == index) {
+            DeselectCard();
+            return;
+        }
+
         // Deselect previous card
         if (currentlySelectedCard != null && currentCardIndex >= 0 && currentCardIndex < cardObjectsInHand.Count) {
             ResetCardVisuals(currentCardIndex);
@@ -68,23 +86,37 @@ public class CardsInHandController : MonoBehaviour {
         currentCardIndex = index;
         currentlySelectedCard = cardObjectsInHand[currentCardIndex];
         
+        // Set up animation targets
+        targetPosition = CalculateCardPosition(currentCardIndex);
+        targetPosition.y += selectedCardYOffset;
+        targetScale = handCardScale * selectedCardScaleMultiplier;
+        isAnimatingSelection = true;
+        
         OnCardSelected?.Invoke(currentCardIndex);
         Debug.Log($"Selected card: {currentlySelectedCard.GetComponent<Card>().cardData.cardName}");
     }
 
-    private void AnimateSelectedCard() {
-        if (currentlySelectedCard == null || currentCardIndex < 0) return;
+    private void DeselectCard() {
+        if (currentCardIndex < 0 || currentlySelectedCard == null) return;
+        
+        ResetCardVisuals(currentCardIndex);
+        currentCardIndex = -1;
+        currentlySelectedCard = null;
+        isAnimatingSelection = false;
+        
+        Debug.Log("Deselected card");
+    }
 
-        // Get target position for selected card
-        Vector3 targetPos = CalculateCardPosition(currentCardIndex);
-        targetPos.y += selectedCardYOffset; // Move forward
-        
-        Vector3 targetScale = handCardScale * selectedCardScaleMultiplier;
-        
+    private void AnimateSelectedCard() {
+        if (currentlySelectedCard == null || currentCardIndex < 0) {
+            isAnimatingSelection = false;
+            return;
+        }
+
         // Smoothly animate to target
         currentlySelectedCard.transform.localPosition = Vector3.Lerp(
             currentlySelectedCard.transform.localPosition,
-            targetPos,
+            targetPosition,
             Time.deltaTime * selectionAnimationSpeed
         );
         
@@ -99,13 +131,22 @@ public class CardsInHandController : MonoBehaviour {
         if (spriteRenderer != null) {
             spriteRenderer.color = selectedCardTint;
         }
+        
+        // Check if animation is complete
+        if (Vector3.Distance(currentlySelectedCard.transform.localPosition, targetPosition) < 0.01f) {
+            isAnimatingSelection = false;
+        }
     }
 
     private void ResetCardVisuals(int index) {
         if (index < 0 || index >= cardObjectsInHand.Count) return;
         
         var card = cardObjectsInHand[index];
-        RepositionCard(index);
+        
+        // Reset position, rotation, and scale
+        card.transform.localPosition = CalculateCardPosition(index);
+        card.transform.localRotation = CalculateCardRotation(index);
+        card.transform.localScale = handCardScale;
         
         // Reset color
         var spriteRenderer = card.GetComponent<SpriteRenderer>();
@@ -115,33 +156,56 @@ public class CardsInHandController : MonoBehaviour {
     }
 
     private void HandleGridPlacement() {
-        if (currentCardIndex == -1) return; // No card selected
+        if (currentCardIndex == -1 || currentlySelectedCard == null) return;
 
-        if (Mouse.current.rightButton.wasPressedThisFrame) {
+        // Use left click to place card (since left click selects)
+        if (Mouse.current.leftButton.wasPressedThisFrame) {
             Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
             if (Physics.Raycast(ray, out RaycastHit hit)) {
                 if (hit.collider.CompareTag("GridSlot")) {
-                    Vector3 slotPos = hit.collider.transform.position;
-
-                    // Find grid coordinates
-                    int x = -1, z = -1;
-                    for (int i = 0; i < gameManager.gridZ; i++) {
-                        for (int j = 0; j < gameManager.gridX; j++) {
-                            if (Vector3.Distance(gameManager.cardSlots[i, j], slotPos) < 0.5f) {
-                                x = j; z = i;
-                                break;
-                            }
-                        }
-                        if (x >= 0) break;
-                    }
-
-                    if (x >= 0 && z >= 0) {
-                        var selectedCard = cardObjectsInHand[currentCardIndex];
-                        gameManager.PlayCard(selectedCard, x, z);
-                        currentCardIndex = -1;
-                        currentlySelectedCard = null;
-                    }
+                    TryPlaceCardOnGrid(hit.collider.gameObject);
                 }
+            }
+        }
+    }
+
+    private void TryPlaceCardOnGrid(GameObject gridSlot) {
+        Vector3 slotPos = gridSlot.transform.position;
+
+        // Find grid coordinates - using the correct array dimensions
+        int col = -1, row = -1;
+        float minDistance = float.MaxValue;
+        
+        for (int r = 0; r < gameManager.cardSlots.GetLength(0); r++) {
+            for (int c = 0; c < gameManager.cardSlots.GetLength(1); c++) {
+                float distance = Vector3.Distance(gameManager.cardSlots[r, c], slotPos);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    row = r;
+                    col = c;
+                }
+            }
+        }
+
+        // Only try to place if we found a close match
+        if (minDistance < 0.5f && col >= 0 && row >= 0) {
+            var selectedCard = cardObjectsInHand[currentCardIndex];
+            
+            // Store the original scale before placement
+            Vector3 originalScale = selectedCard.transform.localScale;
+            
+            // Check if placement is valid
+            var cardData = selectedCard.GetComponent<Card>().cardData;
+            if (gameManager.CanPlaceCard(col, row, cardData)) {
+                // Place the card
+                gameManager.PlayCard(selectedCard, col, row);
+                
+                // Deselect
+                currentCardIndex = -1;
+                currentlySelectedCard = null;
+                isAnimatingSelection = false;
+            } else {
+                Debug.Log("Cannot place card at this location");
             }
         }
     }
@@ -154,10 +218,14 @@ public class CardsInHandController : MonoBehaviour {
 
         cardObjectsInHand.Add(card);
         card.SetActive(true);
-        card.tag = "CardInHand"; // Ensure correct tag
+        card.tag = "CardInHand";
         
         // Position card visually in hand
         card.transform.SetParent(handPlaceHolder);
+        
+        // Enable collider for selection
+        var collider = card.GetComponent<Collider>();
+        if (collider != null) collider.enabled = true;
         
         // Reset sprite color to original
         var spriteRenderer = card.GetComponent<SpriteRenderer>();
@@ -172,7 +240,18 @@ public class CardsInHandController : MonoBehaviour {
 
     public void RemoveCardFromHand(GameObject card) {
         if (cardObjectsInHand.Contains(card)) {
+            int removedIndex = cardObjectsInHand.IndexOf(card);
             cardObjectsInHand.Remove(card);
+            
+            // If we removed the selected card or a card before it, adjust selection
+            if (currentCardIndex == removedIndex) {
+                currentCardIndex = -1;
+                currentlySelectedCard = null;
+                isAnimatingSelection = false;
+            } else if (currentCardIndex > removedIndex) {
+                currentCardIndex--;
+            }
+            
             RepositionAllCards();
             
             Debug.Log($"Removed card from hand. Hand size: {HandCount}");
@@ -181,7 +260,10 @@ public class CardsInHandController : MonoBehaviour {
 
     private void RepositionAllCards() {
         for (int i = 0; i < cardObjectsInHand.Count; i++) {
-            RepositionCard(i);
+            // Don't reposition if it's the currently selected card (it's animating)
+            if (i != currentCardIndex || !isAnimatingSelection) {
+                RepositionCard(i);
+            }
         }
     }
 
@@ -198,7 +280,6 @@ public class CardsInHandController : MonoBehaviour {
         int totalCards = cardObjectsInHand.Count;
         
         if (totalCards == 1) {
-            // Single card centered
             return Vector3.zero;
         }
         
@@ -226,5 +307,15 @@ public class CardsInHandController : MonoBehaviour {
         float angle = Mathf.Lerp(-fanAngle / 2f, fanAngle / 2f, normalizedIndex);
         
         return Quaternion.Euler(handCardRotation.x, handCardRotation.y, handCardRotation.z + angle);
+    }
+    
+    // Public method to check if a card is selected
+    public bool HasSelectedCard() {
+        return currentCardIndex >= 0 && currentlySelectedCard != null;
+    }
+    
+    // Public method to get selected card
+    public GameObject GetSelectedCard() {
+        return currentlySelectedCard;
     }
 }

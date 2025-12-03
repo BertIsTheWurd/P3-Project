@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 7099352878646028790}
   - component: {fileID: 6394906166185129399}
   - component: {fileID: -8025674565955463268}
-  - component: {fileID: 5604245194556930250}
+  - component: {fileID: 3976231089929275940}
   m_Layer: 0
   m_Name: Card
   m_TagString: Untagged
@@ -47,7 +47,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Card
   cardData: {fileID: 0}
-  cardBackSprite: {fileID: 21300000, guid: ae364a75a8013417aaf14c767bc5134e, type: 3}
 --- !u!212 &-8025674565955463268
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -106,7 +105,7 @@ SpriteRenderer:
   m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!65 &5604245194556930250
+--- !u!65 &3976231089929275940
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -125,5 +124,5 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  m_Size: {x: 2.56, y: 3.520001, z: 0.02}
   m_Center: {x: 0, y: 0, z: 0}

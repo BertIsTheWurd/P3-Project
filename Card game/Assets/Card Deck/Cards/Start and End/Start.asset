@@ -21,5 +21,5 @@ MonoBehaviour:
   specialCard: 0
   connectsUp: 1
   connectsDown: 1
-  connectsLeft: 0
+  connectsLeft: 1
   connectsRight: 1
