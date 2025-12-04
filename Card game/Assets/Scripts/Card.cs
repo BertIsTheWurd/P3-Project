@@ -81,9 +81,10 @@ public class Card : MonoBehaviour
     {
         currentRotation = (currentRotation + 180) % 360;
         
-        // Apply visual rotation
+        // Set absolute local rotation (don't add to existing rotation)
+        // This prevents accumulation of rotation from hand positioning
         Vector3 currentEuler = transform.localEulerAngles;
-        transform.localEulerAngles = new Vector3(currentEuler.x, currentEuler.y, currentEuler.z + 180);
+        transform.localEulerAngles = new Vector3(currentEuler.x, currentEuler.y, currentRotation);
         
         Debug.Log($"Card rotated to {currentRotation} degrees");
     }
@@ -93,14 +94,11 @@ public class Card : MonoBehaviour
     {
         if (currentRotation == 0) return;
         
-        // Calculate how much to rotate back to 0
-        int rotateAmount = 360 - currentRotation;
-        
-        // Apply visual rotation
-        Vector3 currentEuler = transform.localEulerAngles;
-        transform.localEulerAngles = new Vector3(currentEuler.x, currentEuler.y, currentEuler.z + rotateAmount);
-        
         currentRotation = 0;
+        
+        // Set absolute local rotation to 0
+        Vector3 currentEuler = transform.localEulerAngles;
+        transform.localEulerAngles = new Vector3(currentEuler.x, currentEuler.y, 0);
         
         Debug.Log($"Card rotation reset to 0 degrees");
     }

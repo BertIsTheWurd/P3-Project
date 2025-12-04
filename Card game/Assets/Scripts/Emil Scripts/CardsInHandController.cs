@@ -206,12 +206,8 @@ public class CardsInHandController : MonoBehaviour {
         if (minDistance < 0.5f && col >= 0 && row >= 0) {
             var selectedCard = cardObjectsInHand[currentCardIndex];
             
-            // Store the original scale before placement
-            Vector3 originalScale = selectedCard.transform.localScale;
-            
-            // Check if placement is valid
-            var cardData = selectedCard.GetComponent<Card>().cardData;
-            if (gameManager.CanPlaceCard(col, row, cardData)) {
+            // Check if placement is valid - pass GameObject so rotation is considered
+            if (gameManager.CanPlaceCard(col, row, selectedCard)) {
                 // Place the card
                 gameManager.PlayCard(selectedCard, col, row);
                 

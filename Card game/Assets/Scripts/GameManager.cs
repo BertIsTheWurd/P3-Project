@@ -165,10 +165,17 @@ public class GameManager : MonoBehaviour
         discardPile.AddToDiscard(card);
     }
 
-    public bool CanPlaceCard(int col, int row, DirectionalCardData newCard)
+    public bool CanPlaceCard(int col, int row, GameObject cardObj)
     {
         // col is 0-6 (gridZ), row is 0-4 (gridX)
         Debug.Log($"Checking placement at row {row}, col {col}");
+        
+        var newCard = cardObj.GetComponent<Card>();
+        if (newCard == null)
+        {
+            Debug.LogError("Card component not found on GameObject!");
+            return false;
+        }
         
         // Check bounds
         if (row < 0 || row >= gridX || col < 0 || col >= gridZ)
@@ -202,17 +209,17 @@ public class GameManager : MonoBehaviour
             adjacentCardCount++;
             var neighbor = playedCards[row - 1, col].GetComponent<Card>();
             
-            // Both cards must agree on the connection
-            if (newCard.connectsUp && neighbor.ConnectsDown)
+            // Both cards must agree on the connection - use Card properties that account for rotation
+            if (newCard.ConnectsUp && neighbor.ConnectsDown)
             {
                 hasValidConnection = true;
                 Debug.Log("Valid connection UP");
             }
-            else if (newCard.connectsUp && !neighbor.ConnectsDown)
+            else if (newCard.ConnectsUp && !neighbor.ConnectsDown)
             {
                 Debug.Log("Mismatch UP: new card connects up but neighbor doesn't connect down");
             }
-            else if (!newCard.connectsUp && neighbor.ConnectsDown)
+            else if (!newCard.ConnectsUp && neighbor.ConnectsDown)
             {
                 Debug.Log("Mismatch UP: neighbor connects down but new card doesn't connect up");
             }
@@ -225,16 +232,16 @@ public class GameManager : MonoBehaviour
             adjacentCardCount++;
             var neighbor = playedCards[row + 1, col].GetComponent<Card>();
             
-            if (newCard.connectsDown && neighbor.ConnectsUp)
+            if (newCard.ConnectsDown && neighbor.ConnectsUp)
             {
                 hasValidConnection = true;
                 Debug.Log("Valid connection DOWN");
             }
-            else if (newCard.connectsDown && !neighbor.ConnectsUp)
+            else if (newCard.ConnectsDown && !neighbor.ConnectsUp)
             {
                 Debug.Log("Mismatch DOWN: new card connects down but neighbor doesn't connect up");
             }
-            else if (!newCard.connectsDown && neighbor.ConnectsUp)
+            else if (!newCard.ConnectsDown && neighbor.ConnectsUp)
             {
                 Debug.Log("Mismatch DOWN: neighbor connects up but new card doesn't connect down");
             }
@@ -246,16 +253,16 @@ public class GameManager : MonoBehaviour
             adjacentCardCount++;
             var neighbor = playedCards[row, col - 1].GetComponent<Card>();
             
-            if (newCard.connectsLeft && neighbor.ConnectsRight)
+            if (newCard.ConnectsLeft && neighbor.ConnectsRight)
             {
                 hasValidConnection = true;
                 Debug.Log("Valid connection LEFT");
             }
-            else if (newCard.connectsLeft && !neighbor.ConnectsRight)
+            else if (newCard.ConnectsLeft && !neighbor.ConnectsRight)
             {
                 Debug.Log("Mismatch LEFT: new card connects left but neighbor doesn't connect right");
             }
-            else if (!newCard.connectsLeft && neighbor.ConnectsRight)
+            else if (!newCard.ConnectsLeft && neighbor.ConnectsRight)
             {
                 Debug.Log("Mismatch LEFT: neighbor connects right but new card doesn't connect left");
             }
@@ -267,16 +274,16 @@ public class GameManager : MonoBehaviour
             adjacentCardCount++;
             var neighbor = playedCards[row, col + 1].GetComponent<Card>();
             
-            if (newCard.connectsRight && neighbor.ConnectsLeft)
+            if (newCard.ConnectsRight && neighbor.ConnectsLeft)
             {
                 hasValidConnection = true;
                 Debug.Log("Valid connection RIGHT");
             }
-            else if (newCard.connectsRight && !neighbor.ConnectsLeft)
+            else if (newCard.ConnectsRight && !neighbor.ConnectsLeft)
             {
                 Debug.Log("Mismatch RIGHT: new card connects right but neighbor doesn't connect left");
             }
-            else if (!newCard.connectsRight && neighbor.ConnectsLeft)
+            else if (!newCard.ConnectsRight && neighbor.ConnectsLeft)
             {
                 Debug.Log("Mismatch RIGHT: neighbor connects left but new card doesn't connect right");
             }
@@ -305,7 +312,8 @@ public class GameManager : MonoBehaviour
         var card = cardObj.GetComponent<Card>();
         Debug.Log($"Attempting to play card at row {row}, col {col}");
         
-        if (!CanPlaceCard(col, row, card.cardData))
+        // Pass the GameObject so rotation is considered
+        if (!CanPlaceCard(col, row, cardObj))
         {
             Debug.Log("Invalid placement: path does not connect or no adjacent cards.");
             return;
@@ -314,7 +322,11 @@ public class GameManager : MonoBehaviour
         handController.RemoveCardFromHand(cardObj);
         cardObj.transform.SetParent(null);
         cardObj.transform.position = cardSlots[row, col];
-        cardObj.transform.rotation = Quaternion.Euler(90, 0, 0);
+        
+        // Use the Card's stored rotation state (0 or 180) for clean placement
+        int cardRotation = card.GetRotation();
+        cardObj.transform.rotation = Quaternion.Euler(90, 0, cardRotation);
+        
         // Keep the scale consistent with other cards on the grid (0.25, 0.25, 0.25)
         cardObj.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
         cardObj.tag = "PlayedCard";
