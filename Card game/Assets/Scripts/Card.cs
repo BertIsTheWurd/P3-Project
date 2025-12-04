@@ -13,6 +13,11 @@ public class Card : MonoBehaviour
     private bool originalConnectsDown;
     private bool originalConnectsLeft;
     private bool originalConnectsRight;
+    
+    // Card state flags
+    private bool isBlocked = false;      // Card is blocked by Dead End, Bureaucratic Barrier, etc.
+    private bool isDisabled = false;     // Card is disabled by Censor
+    private CardType blockingCardType;   // What type of card is blocking this?
 
     private void Awake()
     {
@@ -49,6 +54,12 @@ public class Card : MonoBehaviour
         if (cardData != null && spriteRenderer != null)
         {
             spriteRenderer.sprite = cardData.cardImage;
+            
+            // Apply card tint if specified
+            if (cardData.cardTint != Color.white)
+            {
+                spriteRenderer.color = cardData.cardTint;
+            }
         }
     }
 
@@ -74,6 +85,26 @@ public class Card : MonoBehaviour
             ShowCardBack();
         else
             ShowCardFront();
+            
+        // Visual feedback for disabled/blocked cards
+        UpdateVisualState();
+    }
+    
+    // Update visual state based on card status
+    private void UpdateVisualState()
+    {
+        if (spriteRenderer == null) return;
+        
+        if (isDisabled)
+        {
+            // Darken and desaturate disabled cards
+            spriteRenderer.color = new Color(0.5f, 0.5f, 0.5f, 0.7f);
+        }
+        else if (isBlocked)
+        {
+            // Slightly red tint for blocked cards
+            spriteRenderer.color = new Color(1f, 0.7f, 0.7f, 1f);
+        }
     }
     
     // Rotate the card 180 degrees
@@ -108,12 +139,46 @@ public class Card : MonoBehaviour
     {
         return currentRotation;
     }
+    
+    // Blocking state management
+    public void SetBlocked(bool blocked, CardType blockType = CardType.DeadEnd)
+    {
+        isBlocked = blocked;
+        blockingCardType = blockType;
+        UpdateVisualState();
+        Debug.Log($"Card {cardData.cardName} blocked state set to: {blocked}");
+    }
+    
+    public bool IsBlocked()
+    {
+        return isBlocked;
+    }
+    
+    public CardType GetBlockingCardType()
+    {
+        return blockingCardType;
+    }
+    
+    // Disabled state management (for Censor cards)
+    public void SetDisabled(bool disabled)
+    {
+        isDisabled = disabled;
+        UpdateVisualState();
+        Debug.Log($"Card {cardData.cardName} disabled state set to: {disabled}");
+    }
+    
+    public bool IsDisabled()
+    {
+        return isDisabled;
+    }
 
-    // Connection properties that account for rotation
+    // Connection properties that account for rotation AND blocking/disabled state
     public bool ConnectsUp
     {
         get
         {
+            if (isDisabled || isBlocked) return false;  // Disabled/blocked cards don't connect
+            
             switch (currentRotation)
             {
                 case 0:   return originalConnectsUp;
@@ -129,6 +194,8 @@ public class Card : MonoBehaviour
     {
         get
         {
+            if (isDisabled || isBlocked) return false;
+            
             switch (currentRotation)
             {
                 case 0:   return originalConnectsDown;
@@ -144,6 +211,8 @@ public class Card : MonoBehaviour
     {
         get
         {
+            if (isDisabled || isBlocked) return false;
+            
             switch (currentRotation)
             {
                 case 0:   return originalConnectsLeft;
@@ -159,6 +228,8 @@ public class Card : MonoBehaviour
     {
         get
         {
+            if (isDisabled || isBlocked) return false;
+            
             switch (currentRotation)
             {
                 case 0:   return originalConnectsRight;

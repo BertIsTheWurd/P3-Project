@@ -319,6 +319,8 @@ MonoBehaviour:
   HandSize: 6
   port: 5005
   lookingAway: 0
+  sabotageCheckDelay: 2
+  sabotageAnimationDuration: 1
   lastPlayedCard: {fileID: 0}
 --- !u!4 &536226666
 Transform:
@@ -798,6 +800,51 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &1356264591
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1356264593}
+  - component: {fileID: 1356264592}
+  m_Layer: 0
+  m_Name: CardAbilityHandler
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1356264592
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1356264591}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f1c6a76c369a4457958a667c5bbad56, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CardAbilityHandler
+  abilityAnimationDuration: 0.5
+--- !u!4 &1356264593
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1356264591}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.55993, y: 0, z: 1.07272}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1576927270
 GameObject:
   m_ObjectHideFlags: 0
@@ -949,3 +996,4 @@ SceneRoots:
   - {fileID: 1708531459}
   - {fileID: 231970409}
   - {fileID: 507905712}
+  - {fileID: 1356264593}
