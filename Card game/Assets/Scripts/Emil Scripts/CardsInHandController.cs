@@ -44,6 +44,7 @@ public class CardsInHandController : MonoBehaviour {
 
     void Update() {
         HandleCardSelection();
+        HandleCardRotation();
         HandleGridPlacement();
         if (isAnimatingSelection) {
             AnimateSelectedCard();
@@ -168,6 +169,20 @@ public class CardsInHandController : MonoBehaviour {
             }
         }
     }
+    
+    private void HandleCardRotation() {
+        // Only rotate if a card is selected
+        if (currentCardIndex == -1 || currentlySelectedCard == null) return;
+        
+        // Check for R key press (works with both old and new input system)
+        if (Input.GetKeyDown(KeyCode.R)) {
+            var card = currentlySelectedCard.GetComponent<Card>();
+            if (card != null) {
+                card.Rotate180();
+                Debug.Log($"Rotated card: {card.cardData.cardName} to {card.GetRotation()} degrees");
+            }
+        }
+    }
 
     private void TryPlaceCardOnGrid(GameObject gridSlot) {
         Vector3 slotPos = gridSlot.transform.position;
@@ -222,6 +237,12 @@ public class CardsInHandController : MonoBehaviour {
         
         // Position card visually in hand
         card.transform.SetParent(handPlaceHolder);
+        
+        // Reset rotation when adding to hand
+        var cardComponent = card.GetComponent<Card>();
+        if (cardComponent != null) {
+            cardComponent.ResetRotation();
+        }
         
         // Enable collider for selection
         var collider = card.GetComponent<Collider>();

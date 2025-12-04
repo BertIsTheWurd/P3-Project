@@ -76,14 +76,16 @@ public class GameManager : MonoBehaviour
 
         Vector3 center = gridCenter != null ? gridCenter.position : Vector3.zero;
 
-        for (int row = 0; row < gridX; row++) // 5 rows
+        for (int row = 0; row < gridX; row++) // 5 rows (0 = top, 4 = bottom)
         {
-            for (int col = 0; col < gridZ; col++) // 7 columns
+            for (int col = 0; col < gridZ; col++) // 7 columns (0 = left, 6 = right)
             {
+                // INVERTED: row 0 should be at HIGHEST Z (furthest from camera)
+                // So we use (gridX - 1 - row) instead of row for Z calculation
                 Vector3 pos = new Vector3(
-                    center.x + (col * slotWidth) - offsetX,      // col controls X (left-right)
+                    center.x + (col * slotWidth) - offsetX,           // col controls X (left-right)
                     center.y,
-                    center.z + (row * slotHeight) - offsetZ      // row controls Z (top-bottom)
+                    center.z + ((gridX - 1 - row) * slotHeight) - offsetZ  // INVERTED row for Z
                 );
 
                 var slot = Instantiate(gridSlotPrefab, pos, Quaternion.Euler(90, 0, 0));
@@ -192,119 +194,109 @@ public class GameManager : MonoBehaviour
         }
 
         bool hasValidConnection = false;
-        bool hasInvalidConnection = false;
+        int adjacentCardCount = 0;
 
         // Check up (row - 1)
         if (row > 0 && playedCards[row - 1, col] != null)
         {
+            adjacentCardCount++;
             var neighbor = playedCards[row - 1, col].GetComponent<Card>();
-            // If neighbor has a connection pointing down, new card MUST connect up
-            if (neighbor.ConnectsDown)
+            
+            // Both cards must agree on the connection
+            if (newCard.connectsUp && neighbor.ConnectsDown)
             {
-                if (newCard.connectsUp)
-                {
-                    hasValidConnection = true;
-                    Debug.Log("Valid connection UP");
-                }
-                else
-                {
-                    Debug.Log("Invalid: neighbor connects down but new card doesn't connect up");
-                    hasInvalidConnection = true;
-                }
+                hasValidConnection = true;
+                Debug.Log("Valid connection UP");
             }
-            // If new card connects up, neighbor MUST connect down
-            else if (newCard.connectsUp)
+            else if (newCard.connectsUp && !neighbor.ConnectsDown)
             {
-                Debug.Log("Invalid: new card connects up but neighbor doesn't connect down");
-                hasInvalidConnection = true;
+                Debug.Log("Mismatch UP: new card connects up but neighbor doesn't connect down");
             }
+            else if (!newCard.connectsUp && neighbor.ConnectsDown)
+            {
+                Debug.Log("Mismatch UP: neighbor connects down but new card doesn't connect up");
+            }
+            // else: neither connects in this direction - that's fine
         }
         
         // Check down (row + 1)
         if (row < gridX - 1 && playedCards[row + 1, col] != null)
         {
+            adjacentCardCount++;
             var neighbor = playedCards[row + 1, col].GetComponent<Card>();
-            if (neighbor.ConnectsUp)
+            
+            if (newCard.connectsDown && neighbor.ConnectsUp)
             {
-                if (newCard.connectsDown)
-                {
-                    hasValidConnection = true;
-                    Debug.Log("Valid connection DOWN");
-                }
-                else
-                {
-                    Debug.Log("Invalid: neighbor connects up but new card doesn't connect down");
-                    hasInvalidConnection = true;
-                }
+                hasValidConnection = true;
+                Debug.Log("Valid connection DOWN");
             }
-            else if (newCard.connectsDown)
+            else if (newCard.connectsDown && !neighbor.ConnectsUp)
             {
-                Debug.Log("Invalid: new card connects down but neighbor doesn't connect up");
-                hasInvalidConnection = true;
+                Debug.Log("Mismatch DOWN: new card connects down but neighbor doesn't connect up");
+            }
+            else if (!newCard.connectsDown && neighbor.ConnectsUp)
+            {
+                Debug.Log("Mismatch DOWN: neighbor connects up but new card doesn't connect down");
             }
         }
         
         // Check left (col - 1)
         if (col > 0 && playedCards[row, col - 1] != null)
         {
+            adjacentCardCount++;
             var neighbor = playedCards[row, col - 1].GetComponent<Card>();
-            if (neighbor.ConnectsRight)
+            
+            if (newCard.connectsLeft && neighbor.ConnectsRight)
             {
-                if (newCard.connectsLeft)
-                {
-                    hasValidConnection = true;
-                    Debug.Log("Valid connection LEFT");
-                }
-                else
-                {
-                    Debug.Log("Invalid: neighbor connects right but new card doesn't connect left");
-                    hasInvalidConnection = true;
-                }
+                hasValidConnection = true;
+                Debug.Log("Valid connection LEFT");
             }
-            else if (newCard.connectsLeft)
+            else if (newCard.connectsLeft && !neighbor.ConnectsRight)
             {
-                Debug.Log("Invalid: new card connects left but neighbor doesn't connect right");
-                hasInvalidConnection = true;
+                Debug.Log("Mismatch LEFT: new card connects left but neighbor doesn't connect right");
+            }
+            else if (!newCard.connectsLeft && neighbor.ConnectsRight)
+            {
+                Debug.Log("Mismatch LEFT: neighbor connects right but new card doesn't connect left");
             }
         }
         
         // Check right (col + 1)
         if (col < gridZ - 1 && playedCards[row, col + 1] != null)
         {
+            adjacentCardCount++;
             var neighbor = playedCards[row, col + 1].GetComponent<Card>();
-            if (neighbor.ConnectsLeft)
+            
+            if (newCard.connectsRight && neighbor.ConnectsLeft)
             {
-                if (newCard.connectsRight)
-                {
-                    hasValidConnection = true;
-                    Debug.Log("Valid connection RIGHT");
-                }
-                else
-                {
-                    Debug.Log("Invalid: neighbor connects left but new card doesn't connect right");
-                    hasInvalidConnection = true;
-                }
+                hasValidConnection = true;
+                Debug.Log("Valid connection RIGHT");
             }
-            else if (newCard.connectsRight)
+            else if (newCard.connectsRight && !neighbor.ConnectsLeft)
             {
-                Debug.Log("Invalid: new card connects right but neighbor doesn't connect left");
-                hasInvalidConnection = true;
+                Debug.Log("Mismatch RIGHT: new card connects right but neighbor doesn't connect left");
+            }
+            else if (!newCard.connectsRight && neighbor.ConnectsLeft)
+            {
+                Debug.Log("Mismatch RIGHT: neighbor connects left but new card doesn't connect right");
             }
         }
 
-        // Card is valid if it has at least one valid connection and no invalid connections
-        if (hasInvalidConnection)
+        // Must have at least one adjacent card
+        if (adjacentCardCount == 0)
         {
-            Debug.Log("Card has invalid connections with neighbors");
+            Debug.Log("No adjacent cards - card must be placed next to existing cards");
             return false;
         }
         
+        // Must have at least one valid connection
         if (!hasValidConnection)
         {
             Debug.Log("No valid connections found - card must connect to at least one adjacent card");
             return false;
         }
         
+        Debug.Log("Card placement is valid!");
         return true;
     }
 
@@ -467,4 +459,8 @@ public class GameManager : MonoBehaviour
             udpClient.Close();
         }
     }
+
+    // Additional properties for grid dimensions
+    public int gridWidth => gridZ;
+    public int gridHeight => gridX;
 }

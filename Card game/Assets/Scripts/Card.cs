@@ -4,6 +4,15 @@ public class Card : MonoBehaviour
 {
     public DirectionalCardData cardData;
     private SpriteRenderer spriteRenderer;
+    
+    // Rotation state (0, 90, 180, 270 degrees)
+    private int currentRotation = 0;
+    
+    // Store original connections from card data
+    private bool originalConnectsUp;
+    private bool originalConnectsDown;
+    private bool originalConnectsLeft;
+    private bool originalConnectsRight;
 
     private void Awake()
     {
@@ -19,6 +28,19 @@ public class Card : MonoBehaviour
     public void SetCardData(DirectionalCardData data)
     {
         cardData = data;
+        
+        // Store original connections
+        if (cardData != null)
+        {
+            originalConnectsUp = cardData.connectsUp;
+            originalConnectsDown = cardData.connectsDown;
+            originalConnectsLeft = cardData.connectsLeft;
+            originalConnectsRight = cardData.connectsRight;
+        }
+        
+        // Reset rotation when new card data is set
+        currentRotation = 0;
+        
         UpdateAppearanceBasedOnTag();
     }
 
@@ -53,9 +75,100 @@ public class Card : MonoBehaviour
         else
             ShowCardFront();
     }
+    
+    // Rotate the card 180 degrees
+    public void Rotate180()
+    {
+        currentRotation = (currentRotation + 180) % 360;
+        
+        // Apply visual rotation
+        Vector3 currentEuler = transform.localEulerAngles;
+        transform.localEulerAngles = new Vector3(currentEuler.x, currentEuler.y, currentEuler.z + 180);
+        
+        Debug.Log($"Card rotated to {currentRotation} degrees");
+    }
+    
+    // Reset rotation to 0
+    public void ResetRotation()
+    {
+        if (currentRotation == 0) return;
+        
+        // Calculate how much to rotate back to 0
+        int rotateAmount = 360 - currentRotation;
+        
+        // Apply visual rotation
+        Vector3 currentEuler = transform.localEulerAngles;
+        transform.localEulerAngles = new Vector3(currentEuler.x, currentEuler.y, currentEuler.z + rotateAmount);
+        
+        currentRotation = 0;
+        
+        Debug.Log($"Card rotation reset to 0 degrees");
+    }
+    
+    // Get current rotation
+    public int GetRotation()
+    {
+        return currentRotation;
+    }
 
-    public bool ConnectsUp => cardData.connectsUp;
-    public bool ConnectsDown => cardData.connectsDown;
-    public bool ConnectsLeft => cardData.connectsLeft;
-    public bool ConnectsRight => cardData.connectsRight;
+    // Connection properties that account for rotation
+    public bool ConnectsUp
+    {
+        get
+        {
+            switch (currentRotation)
+            {
+                case 0:   return originalConnectsUp;
+                case 90:  return originalConnectsLeft;
+                case 180: return originalConnectsDown;
+                case 270: return originalConnectsRight;
+                default:  return originalConnectsUp;
+            }
+        }
+    }
+
+    public bool ConnectsDown
+    {
+        get
+        {
+            switch (currentRotation)
+            {
+                case 0:   return originalConnectsDown;
+                case 90:  return originalConnectsRight;
+                case 180: return originalConnectsUp;
+                case 270: return originalConnectsLeft;
+                default:  return originalConnectsDown;
+            }
+        }
+    }
+
+    public bool ConnectsLeft
+    {
+        get
+        {
+            switch (currentRotation)
+            {
+                case 0:   return originalConnectsLeft;
+                case 90:  return originalConnectsDown;
+                case 180: return originalConnectsRight;
+                case 270: return originalConnectsUp;
+                default:  return originalConnectsLeft;
+            }
+        }
+    }
+
+    public bool ConnectsRight
+    {
+        get
+        {
+            switch (currentRotation)
+            {
+                case 0:   return originalConnectsRight;
+                case 90:  return originalConnectsUp;
+                case 180: return originalConnectsLeft;
+                case 270: return originalConnectsDown;
+                default:  return originalConnectsRight;
+            }
+        }
+    }
 }
