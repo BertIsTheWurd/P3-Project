@@ -36,6 +36,12 @@ public class GameManager : MonoBehaviour
     public int port = 5005;
     public bool lookingAway = false;
 
+    [Header("Looking Away Sabotage")]
+    public float sabotageCheckDelay = 2f; // Seconds after placing card before checking
+    public float sabotageAnimationDuration = 1f; // How long the removal animation takes
+    private bool canSabotageThisTurn = true; // Reset after each card placement
+    private Coroutine sabotageCheckCoroutine;
+
     private int correctEndRow = -1;
     
     // Track last played card and all card positions
@@ -337,6 +343,16 @@ public class GameManager : MonoBehaviour
         cardPositions[cardObj] = new Vector2Int(col, row);
         lastPlayedCard = cardObj;
         
+        // Enable sabotage for this turn (new card placed)
+        canSabotageThisTurn = true;
+        
+        // Stop any existing sabotage check and start a new one
+        if (sabotageCheckCoroutine != null)
+        {
+            StopCoroutine(sabotageCheckCoroutine);
+        }
+        sabotageCheckCoroutine = StartCoroutine(CheckForSabotage());
+        
         gridSlotObjects[row, col]?.GetComponent<GridSlot>()?.ShowAsOccupied();
 
         Debug.Log($"Card successfully played at row {row}, col {col}");
@@ -435,6 +451,85 @@ public class GameManager : MonoBehaviour
 
         return (false, false);
     }
+    
+    // Coroutine to check if player is looking away after placing a card
+    private System.Collections.IEnumerator CheckForSabotage()
+    {
+        // Wait a bit after card placement before checking
+        yield return new UnityEngine.WaitForSeconds(sabotageCheckDelay);
+        
+        // Check if player is looking away AND sabotage hasn't happened this turn yet
+        if (lookingAway && canSabotageThisTurn && lastPlayedCard != null)
+        {
+            Debug.Log("👁️ Player is looking away! Removing last played card...");
+            yield return StartCoroutine(RemoveLastPlayedCard());
+            canSabotageThisTurn = false; // Prevent multiple sabotages until next card is played
+        }
+    }
+    
+    // Remove the last played card with animation
+    private System.Collections.IEnumerator RemoveLastPlayedCard()
+    {
+        if (lastPlayedCard == null)
+        {
+            Debug.LogWarning("No last played card to remove!");
+            yield break;
+        }
+        
+        GameObject cardToRemove = lastPlayedCard;
+        Vector2Int? cardPos = GetCardPosition(cardToRemove);
+        
+        if (!cardPos.HasValue)
+        {
+            Debug.LogWarning("Could not find position of last played card!");
+            yield break;
+        }
+        
+        int col = cardPos.Value.x;
+        int row = cardPos.Value.y;
+        
+        Debug.Log($"💀 Removing card at row {row}, col {col}");
+        
+        // Animate the card disappearing (shrink and fade)
+        float elapsedTime = 0f;
+        Vector3 originalScale = cardToRemove.transform.localScale;
+        SpriteRenderer spriteRenderer = cardToRemove.GetComponent<SpriteRenderer>();
+        Color originalColor = spriteRenderer != null ? spriteRenderer.color : Color.white;
+        
+        while (elapsedTime < sabotageAnimationDuration)
+        {
+            elapsedTime += Time.deltaTime;
+            float t = elapsedTime / sabotageAnimationDuration;
+            
+            // Shrink the card
+            cardToRemove.transform.localScale = Vector3.Lerp(originalScale, Vector3.zero, t);
+            
+            // Fade out
+            if (spriteRenderer != null)
+            {
+                Color newColor = originalColor;
+                newColor.a = Mathf.Lerp(1f, 0f, t);
+                spriteRenderer.color = newColor;
+            }
+            
+            yield return null;
+        }
+        
+        // Remove from grid
+        playedCards[row, col] = null;
+        cardPositions.Remove(cardToRemove);
+        
+        // Show grid slot as empty again
+        gridSlotObjects[row, col]?.GetComponent<GridSlot>()?.ShowAsEmpty();
+        
+        // Return card to discard pile
+        discardPile.AddToDiscard(cardToRemove);
+        
+        // Clear last played card reference
+        lastPlayedCard = null;
+        
+        Debug.Log("✅ Card successfully removed and sent to discard pile");
+    }
 
     private void OnVictory() => enabled = false;
     private void OnWrongExit() { }
@@ -466,6 +561,12 @@ public class GameManager : MonoBehaviour
 
     private void OnApplicationQuit()
     {
+        // Stop any running sabotage check
+        if (sabotageCheckCoroutine != null)
+        {
+            StopCoroutine(sabotageCheckCoroutine);
+        }
+        
         if (udpClient != null)
         {
             udpClient.Close();
