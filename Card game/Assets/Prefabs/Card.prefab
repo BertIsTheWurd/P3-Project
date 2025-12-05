@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 7099352878646028790}
   - component: {fileID: 6394906166185129399}
   - component: {fileID: -8025674565955463268}
+  - component: {fileID: 3976231089929275940}
   m_Layer: 0
   m_Name: Card
   m_TagString: Untagged
@@ -28,7 +29,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_LocalScale: {x: 0.25, y: 0.25, z: 0.25}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
@@ -45,10 +46,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23c9dd4591d8b3946b05481c9ee19b23, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Card
-  cardName: Prefab
-  type: 0
-  cardImage: {fileID: 21300000, guid: 3bcdeee1ad5ba9240b0d7fa9677beb99, type: 3}
-  isCorrect: 0
+  cardData: {fileID: 0}
 --- !u!212 &-8025674565955463268
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -96,7 +94,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 3bcdeee1ad5ba9240b0d7fa9677beb99, type: 3}
+  m_Sprite: {fileID: 21300000, guid: f53c93f211484443389e4d2097bcb0f9, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -107,3 +105,24 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!65 &3976231089929275940
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2830431810491240454}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 2.3928602, y: 3.365903, z: 0.02}
+  m_Center: {x: -0.02205503, y: 0.018207192, z: -3.6695214e-17}
