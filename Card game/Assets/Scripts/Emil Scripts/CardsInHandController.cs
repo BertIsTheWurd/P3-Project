@@ -33,19 +33,20 @@ public class CardsInHandController : MonoBehaviour {
 
     public int HandCount => cardObjectsInHand.Count;
 
-	//Shoddy merge patchwork
-    [SerializeField] private float cardSpacing = 0.5f;
+	//Shoddy merge patchwork here beware
     
-    private GameManager gameManager;
     private int maxHandsize;
 
     void Start()
     {
     	mainCamera = Camera.main;
         gameManager = FindObjectOfType<GameManager>();
-        
-        if (handPlaceHolder == null) {
+
+        if (handPlaceHolder == null)
+        {
             Debug.LogError("Hand PlaceHolder not assigned!");
+        }
+
         // find and store the GameManager component.
           gameManager = FindObjectOfType<GameManager>();
         // check if the GameManager was found before using its property.
@@ -358,12 +359,13 @@ public class CardsInHandController : MonoBehaviour {
 
                 // Calculate position
                 Vector3 position = new Vector3(startX + (i * cardSpacing), 0f, 0f); // Spread horizontally
-                
+
                 cardObjectsInHand[i].transform.SetParent(handPlaceHolder, false);
                 cardObjectsInHand[i].transform.localPosition = position;
                 cardObjectsInHand[i].transform.localRotation = Quaternion.identity;
             }
-	}
+        }
+    }
     private Vector3 CalculateCardPosition(int index) {
         int totalCards = cardObjectsInHand.Count;
         
