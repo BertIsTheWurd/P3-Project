@@ -10,16 +10,11 @@ public enum CardType
     BureaucraticBarrier,     // Blocks path, removable (Supervisor)
     Warrant,                 // Removes Bureaucratic Barrier (Player/Partner)
     Censor,                  // Disables a card (Supervisor)
-    Uncensor,                // Removes Censor/Propaganda/Orders (Player/Partner)
+    Uncensor,                // Removes Censor (Player/Partner)
     Clue,                    // Bonus turn when connected
     Peek,                    // Check one exit (Player/Partner)
     CoffeeBreak,             // Safe examination phase (Player/Partner)
-    SeeMeInMyOffice,         // Skip turn (Supervisor)
-    TamperWithEvidence,      // Change card direction (Supervisor)
-    MandatoryPsychEval,      // Force break + tamper (Supervisor)
-    Propaganda,              // Temporary barrier (Supervisor)
-    OrdersFromAbove,         // Temporary barrier (Supervisor)
-    Protocol                 // Removes row/column (Supervisor)
+    SeeMeInMyOffice         // Skip turn (Supervisor)
 }
 
 // Enum for card owner
@@ -65,12 +60,6 @@ public class DirectionalCardData : ScriptableObject
     public bool allowsExamination = false; // For Coffee Break
     public bool canCheckExit = false;    // For Peek cards
     public bool disablesCard = false;    // For Censor
-    public bool canChangeDirection = false; // For Tamper with Evidence
-    
-    [Header("Protocol Card Properties (Optional)")]
-    public bool removesRowOrColumn = false;
-    public int targetRow = -1;    // -1 means not set
-    public int targetColumn = -1; // -1 means not set
     
     [Header("Visual Feedback (Optional)")]
     public Color cardTint = Color.white;  // Optional tint for different card types
@@ -96,18 +85,15 @@ public class DirectionalCardData : ScriptableObject
                cardType == CardType.DeadEnd || 
                cardType == CardType.BureaucraticBarrier ||
                cardType == CardType.Censor ||
-               cardType == CardType.Propaganda ||
-               cardType == CardType.OrdersFromAbove ||
                cardType == CardType.Clue;
     }
     
     public bool IsTargetedAbility()
     {
-        // Cards that require targeting another card
+        // Cards that require targeting another card or position
         return cardType == CardType.Warrant || 
                cardType == CardType.Uncensor ||
                cardType == CardType.Censor ||
-               cardType == CardType.TamperWithEvidence ||
                cardType == CardType.Peek;
     }
     
@@ -142,32 +128,25 @@ public class DirectionalCardData : ScriptableObject
                 cardOwner = CardOwner.Supervisor;
                 break;
                 
-            case CardType.Propaganda:
-            case CardType.OrdersFromAbove:
-                isBlockingCard = true;
-                isRemovable = true;
-                removalCardType = CardType.Uncensor;
-                cardOwner = CardOwner.Supervisor;
-                break;
-                
             case CardType.Warrant:
             case CardType.Uncensor:
-            case CardType.Peek:
             case CardType.CoffeeBreak:
                 cardOwner = CardOwner.Player;
                 break;
                 
             case CardType.Censor:
             case CardType.SeeMeInMyOffice:
-            case CardType.TamperWithEvidence:
-            case CardType.MandatoryPsychEval:
-            case CardType.Protocol:
                 cardOwner = CardOwner.Supervisor;
                 break;
                 
             case CardType.Clue:
                 givesBonusTurn = true;
                 cardOwner = CardOwner.Neutral;
+                break;
+                
+            case CardType.Peek:
+                canCheckExit = true;
+                cardOwner = CardOwner.Player;
                 break;
         }
     }

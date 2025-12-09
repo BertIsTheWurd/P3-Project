@@ -15,7 +15,7 @@ MonoBehaviour:
   cardName: Peek
   cardImage: {fileID: 21300000, guid: 28f8746c04d874dad80a660ccb7bc280, type: 3}
   cardBackside: {fileID: 21300000, guid: ae364a75a8013417aaf14c767bc5134e, type: 3}
-  cardType: 1
+  cardType: 9
   cardOwner: 0
   isStart: 0
   isEnd: 0
@@ -33,9 +33,5 @@ MonoBehaviour:
   allowsExamination: 0
   canCheckExit: 1
   disablesCard: 0
-  canChangeDirection: 0
-  removesRowOrColumn: 0
-  targetRow: -1
-  targetColumn: -1
   cardTint: {r: 1, g: 1, b: 1, a: 1}
   cardDescription: 

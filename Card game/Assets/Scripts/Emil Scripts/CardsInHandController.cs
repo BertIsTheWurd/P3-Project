@@ -107,6 +107,22 @@ public class CardsInHandController : MonoBehaviour {
         currentCardIndex = index;
         currentlySelectedCard = cardObjectsInHand[currentCardIndex];
         
+        // Check if this is a Peek card
+        Card cardComponent = currentlySelectedCard.GetComponent<Card>();
+        if (cardComponent != null && cardComponent.cardData.cardType == CardType.Peek)
+        {
+            // Start peek selection process
+            PeekCardHandler peekHandler = FindObjectOfType<PeekCardHandler>();
+            if (peekHandler != null)
+            {
+                peekHandler.BeginPeekSelection(currentlySelectedCard);
+                // Don't do the normal selection animation for Peek cards
+                currentCardIndex = -1;
+                currentlySelectedCard = null;
+                return;
+            }
+        }
+        
         // Set up animation targets
         targetPosition = CalculateCardPosition(currentCardIndex);
         targetPosition.y += selectedCardYOffset;
