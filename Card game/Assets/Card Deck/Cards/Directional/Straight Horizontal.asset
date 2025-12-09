@@ -13,8 +13,10 @@ MonoBehaviour:
   m_Name: Straight Horizontal
   m_EditorClassIdentifier: Assembly-CSharp::DirectionalCardData
   cardName: Straight Horizontal
-  cardImage: {fileID: 21300000, guid: a8f5064d1ab2245a486404eeef35912f, type: 3}
+  cardImage: {fileID: 21300000, guid: 34295c7d88d15489bbeefe061b94cb6c, type: 3}
   cardBackside: {fileID: 21300000, guid: ae364a75a8013417aaf14c767bc5134e, type: 3}
+  cardType: 0
+  cardOwner: 0
   isStart: 0
   isEnd: 0
   isCorrect: 0
@@ -23,3 +25,17 @@ MonoBehaviour:
   connectsDown: 0
   connectsLeft: 1
   connectsRight: 1
+  isBlockingCard: 0
+  isRemovable: 0
+  removalCardType: 0
+  givesBonusTurn: 0
+  forcesSkipTurn: 0
+  allowsExamination: 0
+  canCheckExit: 0
+  disablesCard: 0
+  canChangeDirection: 0
+  removesRowOrColumn: 0
+  targetRow: -1
+  targetColumn: -1
+  cardTint: {r: 1, g: 1, b: 1, a: 1}
+  cardDescription: 
