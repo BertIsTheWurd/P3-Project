@@ -408,6 +408,18 @@ public class GameManager : MonoBehaviour
                 OnWrongExit();
             }
         }
+        else
+        {
+            // Check if player or Supervisor has blocked all paths
+            CheckForGameOver();
+            
+            // Player turn ended - notify Supervisor
+            SupervisorAI supervisor = FindObjectOfType<SupervisorAI>();
+            if (supervisor != null)
+            {
+                supervisor.OnPlayerTurnEnd();
+            }
+        }
     }
     
     // Helper method to get a card's position
@@ -448,6 +460,10 @@ public class GameManager : MonoBehaviour
         HashSet<(int row, int col)> visited = new HashSet<(int, int)>();
         Queue<(int row, int col)> queue = new Queue<(int, int)>();
         queue.Enqueue((startRow, startCol));
+        
+        bool crossedWrongExit = false;
+        bool reachedCorrectExit = false;
+        bool reachedWrongExit = false;
 
         while (queue.Count > 0)
         {
@@ -456,10 +472,32 @@ public class GameManager : MonoBehaviour
             visited.Add((row, col));
 
             var currentCard = playedCards[row, col].GetComponent<Card>();
-            if (col == gridZ - 1 && currentCard.cardData.isEnd)  // last column
+            
+            // Check if we're passing through a wrong exit (not at final column)
+            if (currentCard.cardData.isEnd && col < gridZ - 1)
             {
-                bool isCorrect = (row == correctEndRow);
-                return (true, isCorrect);
+                if (row != correctEndRow)
+                {
+                    Debug.LogWarning($"⚠️ Path crosses wrong exit at row {row}, col {col}");
+                    crossedWrongExit = true;
+                }
+            }
+            
+            // Check if we reached an exit at the final column
+            if (col == gridZ - 1 && currentCard.cardData.isEnd)
+            {
+                if (row == correctEndRow)
+                {
+                    reachedCorrectExit = true;
+                }
+                else
+                {
+                    reachedWrongExit = true;
+                }
+                
+                // Don't return immediately - continue exploring to find all exits
+                // Continue to next iteration to explore other paths
+                continue;
             }
 
             if (currentCard.ConnectsUp && row > 0 && playedCards[row - 1, col] != null)
@@ -483,10 +521,170 @@ public class GameManager : MonoBehaviour
                 if (neighbor.ConnectsLeft) queue.Enqueue((row, col + 1));
             }
         }
+        
+        // After exploring all paths, determine result
+        if (reachedCorrectExit)
+        {
+            if (crossedWrongExit)
+            {
+                Debug.Log("❌ Path reached correct exit but crossed wrong exit - INVALID");
+                return (true, false);
+            }
+            Debug.Log("✅ Path reached correct exit!");
+            return (true, true);
+        }
+        
+        if (reachedWrongExit)
+        {
+            Debug.Log("❌ Path reached wrong exit");
+            return (true, false);
+        }
 
         return (false, false);
     }
     
+    /// <summary>
+    /// Check if the correct exit is still reachable from start
+    /// Returns true if a path exists (even if not yet complete)
+    /// Returns false if completely blocked
+    /// </summary>
+    private bool IsCorrectExitReachable()
+    {
+        int startRow = gridX / 2;
+        int startCol = 0;
+        
+        if (playedCards[startRow, startCol] == null)
+        {
+            return true; // Game just started, exit is potentially reachable
+        }
+        
+        // BFS to see if we can reach the correct exit
+        HashSet<(int row, int col)> visited = new HashSet<(int, int)>();
+        Queue<(int row, int col)> queue = new Queue<(int, int)>();
+        queue.Enqueue((startRow, startCol));
+        
+        while (queue.Count > 0)
+        {
+            var (row, col) = queue.Dequeue();
+            if (visited.Contains((row, col))) continue;
+            visited.Add((row, col));
+            
+            // Check if we reached the correct exit
+            if (row == correctEndRow && col == gridZ - 1)
+            {
+                var cardAtExit = playedCards[row, col];
+                if (cardAtExit != null)
+                {
+                    Card exitCard = cardAtExit.GetComponent<Card>();
+                    if (exitCard != null && exitCard.cardData.isEnd)
+                    {
+                        return true; // Correct exit is reachable!
+                    }
+                }
+                // Empty slot at correct exit location - potentially reachable
+                return true;
+            }
+            
+            // Only explore through PLACED cards, not empty slots
+            // This is stricter - if you can't currently reach it with placed cards, it's blocked
+            var currentCard = playedCards[row, col]?.GetComponent<Card>();
+            if (currentCard == null) continue;
+            
+            // Check Up
+            if (currentCard.ConnectsUp && row > 0)
+            {
+                var neighbor = playedCards[row - 1, col];
+                if (neighbor != null)
+                {
+                    var neighborCard = neighbor.GetComponent<Card>();
+                    // Only traverse if it's not a DeadEnd and connects properly
+                    if (neighborCard != null 
+                        && neighborCard.cardData.cardType != CardType.DeadEnd 
+                        && neighborCard.ConnectsDown)
+                    {
+                        queue.Enqueue((row - 1, col));
+                    }
+                }
+            }
+            
+            // Check Down
+            if (currentCard.ConnectsDown && row < gridX - 1)
+            {
+                var neighbor = playedCards[row + 1, col];
+                if (neighbor != null)
+                {
+                    var neighborCard = neighbor.GetComponent<Card>();
+                    if (neighborCard != null 
+                        && neighborCard.cardData.cardType != CardType.DeadEnd 
+                        && neighborCard.ConnectsUp)
+                    {
+                        queue.Enqueue((row + 1, col));
+                    }
+                }
+            }
+            
+            // Check Left
+            if (currentCard.ConnectsLeft && col > 0)
+            {
+                var neighbor = playedCards[row, col - 1];
+                if (neighbor != null)
+                {
+                    var neighborCard = neighbor.GetComponent<Card>();
+                    if (neighborCard != null 
+                        && neighborCard.cardData.cardType != CardType.DeadEnd 
+                        && neighborCard.ConnectsRight)
+                    {
+                        queue.Enqueue((row, col - 1));
+                    }
+                }
+            }
+            
+            // Check Right
+            if (currentCard.ConnectsRight && col < gridZ - 1)
+            {
+                var neighbor = playedCards[row, col + 1];
+                if (neighbor != null)
+                {
+                    var neighborCard = neighbor.GetComponent<Card>();
+                    if (neighborCard != null 
+                        && neighborCard.cardData.cardType != CardType.DeadEnd 
+                        && neighborCard.ConnectsLeft)
+                    {
+                        queue.Enqueue((row, col + 1));
+                    }
+                }
+            }
+        }
+        
+        return false; // Cannot reach correct exit with current placed cards
+    }
+    
+    /// <summary>
+    /// Called when all paths to correct exit are blocked - Game Over
+    /// </summary>
+    private void OnGameOver()
+    {
+        Debug.Log("💀 GAME OVER - All paths to the correct exit are blocked!");
+        Debug.Log("🎭 The Supervisor has successfully blocked your escape.");
+        
+        // TODO: Show game over screen
+        // TODO: Display message "The Supervisor blocked all paths"
+        // TODO: Show restart/quit options
+        
+        // For now, just log it
+        // You can add UI here later
+    }
+    
+    /// <summary>
+    /// Check if game should end due to blocked paths (call after Supervisor's turn)
+    /// </summary>
+    public void CheckForGameOver()
+    {
+        if (!IsCorrectExitReachable())
+        {
+            OnGameOver();
+        }
+    }
     // Coroutine to check if player is looking away after placing a card
     private System.Collections.IEnumerator CheckForSabotage()
     {
