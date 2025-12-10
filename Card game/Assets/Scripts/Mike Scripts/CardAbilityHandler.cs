@@ -34,7 +34,7 @@ public class CardAbilityHandler : MonoBehaviour
                 break;
                 
             case CardType.Uncensor:
-                yield return RemoveCensorOrBarrier(targetCard);
+                yield return RemoveCensor(targetCard);
                 break;
                 
             case CardType.Peek:
@@ -47,14 +47,6 @@ public class CardAbilityHandler : MonoBehaviour
                 
             case CardType.Censor:
                 yield return CensorCard(targetCard);
-                break;
-                
-            case CardType.TamperWithEvidence:
-                yield return TamperWithCard(targetCard);
-                break;
-                
-            case CardType.Protocol:
-                yield return ExecuteProtocol(cardData, targetRow, targetCol);
                 break;
                 
             default:
@@ -81,7 +73,7 @@ public class CardAbilityHandler : MonoBehaviour
             yield break;
         }
         
-        Debug.Log($"📝 Warrant: Removing Bureaucratic Barrier at {targetCard.transform.position}");
+        Debug.Log($"📋 Warrant: Removing Bureaucratic Barrier at {targetCard.transform.position}");
         
         // Animate removal
         yield return AnimateCardRemoval(targetCard);
@@ -96,9 +88,9 @@ public class CardAbilityHandler : MonoBehaviour
     }
     
     /// <summary>
-    /// Remove a Censor, Propaganda, or Orders from Above card with Uncensor
+    /// Remove a Censor card with Uncensor
     /// </summary>
-    private IEnumerator RemoveCensorOrBarrier(GameObject targetCard)
+    private IEnumerator RemoveCensor(GameObject targetCard)
     {
         if (targetCard == null)
         {
@@ -114,15 +106,13 @@ public class CardAbilityHandler : MonoBehaviour
         }
         
         CardType targetType = card.cardData.cardType;
-        if (targetType != CardType.Censor && 
-            targetType != CardType.Propaganda && 
-            targetType != CardType.OrdersFromAbove)
+        if (targetType != CardType.Censor)
         {
             Debug.LogWarning($"Uncensor: Cannot remove card type: {targetType}");
             yield break;
         }
         
-        Debug.Log($"🔓 Uncensor: Removing {targetType} at {targetCard.transform.position}");
+        Debug.Log($"📰 Uncensor: Removing {targetType} at {targetCard.transform.position}");
         
         // If it's a Censor, un-disable the card it was censoring
         if (targetType == CardType.Censor)
@@ -144,7 +134,7 @@ public class CardAbilityHandler : MonoBehaviour
     }
     
     /// <summary>
-    /// Peek at one of the exit cards
+    /// Peek at one of the exit cards - reveals the card face
     /// </summary>
     private IEnumerator PeekAtExit(int exitRow)
     {
@@ -170,12 +160,15 @@ public class CardAbilityHandler : MonoBehaviour
             yield break;
         }
         
-        Debug.Log($"🔍 Peek: Checking exit at row {exitRow}...");
+        Debug.Log($"🔍 Peek: Revealing exit at row {exitRow}...");
         
-        // Animate the peek (flip the card temporarily)
+        // Animate the peek (pulse the card)
         yield return AnimatePeek(exitCard);
         
-        // Reveal information
+        // Permanently reveal the card
+        gameManager.RevealEndCard(exitRow);
+        
+        // Show result in console
         bool isCorrect = card.cardData.isCorrect;
         string result = isCorrect ? "✅ CORRECT EXIT" : "❌ WRONG EXIT";
         Debug.Log($"🔍 Peek Result: Row {exitRow} is {result}");
@@ -233,56 +226,6 @@ public class CardAbilityHandler : MonoBehaviour
         Debug.Log("✅ Card censored!");
     }
     
-    /// <summary>
-    /// Tamper with evidence - rotate or change a card's direction
-    /// </summary>
-    private IEnumerator TamperWithCard(GameObject targetCard)
-    {
-        if (targetCard == null)
-        {
-            Debug.LogWarning("Tamper: No target card specified!");
-            yield break;
-        }
-        
-        Card card = targetCard.GetComponent<Card>();
-        if (card == null)
-        {
-            Debug.LogWarning("Tamper: Target has no Card component!");
-            yield break;
-        }
-        
-        Debug.Log($"🔄 Tamper: Rotating card {card.cardData.cardName}");
-        
-        // Rotate the card 180 degrees
-        card.Rotate180();
-        
-        // Animate the rotation
-        yield return new WaitForSeconds(abilityAnimationDuration);
-        
-        Debug.Log("✅ Card tampered with!");
-    }
-    
-    /// <summary>
-    /// Execute Protocol - remove entire row or column
-    /// </summary>
-    private IEnumerator ExecuteProtocol(DirectionalCardData protocolCard, int targetRow, int targetCol)
-    {
-        Debug.Log($"📋 Protocol: Removing row {targetRow} or column {targetCol}");
-        
-        if (targetRow >= 0)
-        {
-            // Remove entire row
-            yield return RemoveRow(targetRow);
-        }
-        else if (targetCol >= 0)
-        {
-            // Remove entire column
-            yield return RemoveColumn(targetCol);
-        }
-        
-        Debug.Log("✅ Protocol executed!");
-    }
-    
     // Animation helpers
     private IEnumerator AnimateCardRemoval(GameObject card)
     {
@@ -310,7 +253,7 @@ public class CardAbilityHandler : MonoBehaviour
     
     private IEnumerator AnimatePeek(GameObject exitCard)
     {
-        // Simple pulse animation
+        // Pulse animation to draw attention
         Vector3 originalScale = exitCard.transform.localScale;
         float elapsed = 0f;
         float duration = abilityAnimationDuration;
@@ -340,38 +283,6 @@ public class CardAbilityHandler : MonoBehaviour
             float t = elapsed / abilityAnimationDuration;
             sr.color = Color.Lerp(originalColor, new Color(0.3f, 0.3f, 0.3f, 0.7f), t);
             yield return null;
-        }
-    }
-    
-    private IEnumerator RemoveRow(int row)
-    {
-        Debug.Log($"Removing row {row}...");
-        
-        for (int col = 0; col < gameManager.gridZ; col++)
-        {
-            GameObject card = gameManager.playedCards[row, col];
-            if (card != null && !card.GetComponent<Card>().cardData.isStart && !card.GetComponent<Card>().cardData.isEnd)
-            {
-                yield return AnimateCardRemoval(card);
-                gameManager.RemoveCard(card);
-                gameManager.discardPile.AddToDiscard(card);
-            }
-        }
-    }
-    
-    private IEnumerator RemoveColumn(int col)
-    {
-        Debug.Log($"Removing column {col}...");
-        
-        for (int row = 0; row < gameManager.gridX; row++)
-        {
-            GameObject card = gameManager.playedCards[row, col];
-            if (card != null && !card.GetComponent<Card>().cardData.isStart && !card.GetComponent<Card>().cardData.isEnd)
-            {
-                yield return AnimateCardRemoval(card);
-                gameManager.RemoveCard(card);
-                gameManager.discardPile.AddToDiscard(card);
-            }
         }
     }
 }

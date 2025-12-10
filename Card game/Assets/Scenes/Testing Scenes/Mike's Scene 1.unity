@@ -334,13 +334,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 374722152}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.6963643, y: 0.122787856, z: -0.122787856, w: 0.6963643}
-  m_LocalPosition: {x: 4, y: 0, z: -2}
-  m_LocalScale: {x: 0.25, y: 0.25, z: 0.25}
+  m_LocalRotation: {x: 0, y: 0.17364816, z: 0, w: 0.9848078}
+  m_LocalPosition: {x: 4, y: 0, z: -2.5}
+  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 90, y: 0, z: -20}
+  m_LocalEulerAnglesHint: {x: 0, y: 20, z: 0}
 --- !u!1 &507905710
 GameObject:
   m_ObjectHideFlags: 0
@@ -598,6 +598,52 @@ Transform:
   m_LocalPosition: {x: 5, y: 0, z: -0}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &649441041
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 649441043}
+  - component: {fileID: 649441042}
+  m_Layer: 0
+  m_Name: PeekCardHandler
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &649441042
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 649441041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1882cb1b6dc5149c5af7583bd6403fd0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PeekCardHandler
+  highlightColor: {r: 1, g: 1, b: 0, a: 0.8}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
+--- !u!4 &649441043
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 649441041}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -12.95444, y: -9.90315, z: 6.9999}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -988,8 +1034,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DrawPile
   discardPile: {fileID: 374722153}
   drawAnchor: {fileID: 1576927272}
-  cardStackOffsetZ: -0.05
-  cardStackOffsetY: 0.02
+  cardStackOffsetZ: 0.05
+  cardStackOffsetY: 0.01
   showDrawPile: 1
   drawPileCardScale: {x: 0.25, y: 0.25, z: 0.25}
 --- !u!4 &1576927272
@@ -1002,7 +1048,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0.6963643, y: 0.122787856, z: -0.122787856, w: 0.6963643}
   m_LocalPosition: {x: 3, y: 0, z: -2}
-  m_LocalScale: {x: 0.25, y: 0.25, z: 0.25}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
@@ -1109,3 +1155,4 @@ SceneRoots:
   - {fileID: 231970409}
   - {fileID: 507905712}
   - {fileID: 1356264593}
+  - {fileID: 649441043}

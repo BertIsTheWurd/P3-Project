@@ -17,6 +17,7 @@ public class Card : MonoBehaviour
     // Card state flags
     private bool isBlocked = false;      // Card is blocked by Dead End, Bureaucratic Barrier, etc.
     private bool isDisabled = false;     // Card is disabled by Censor
+    private bool isFaceDown = false;     // Card is face-down (for end cards before Peek)
     private CardType blockingCardType;   // What type of card is blocking this?
 
     private void Awake()
@@ -53,17 +54,25 @@ public class Card : MonoBehaviour
     {
         if (cardData != null && spriteRenderer != null)
         {
-            spriteRenderer.sprite = cardData.cardImage;
-            
-            // Apply card tint if specified
-            if (cardData.cardTint != Color.white)
+            // Show card back if face-down, otherwise show front
+            if (isFaceDown && cardData.cardBackside != null)
             {
-                spriteRenderer.color = cardData.cardTint;
+                spriteRenderer.sprite = cardData.cardBackside;
+            }
+            else
+            {
+                spriteRenderer.sprite = cardData.cardImage;
+                
+                // Apply card tint if specified
+                if (cardData.cardTint != Color.white)
+                {
+                    spriteRenderer.color = cardData.cardTint;
+                }
             }
         }
     }
 
-    // Show the card back (for draw pile)
+    // Show the card back (for draw pile or face-down end cards)
     public void ShowCardBack()
     {
         if (spriteRenderer != null && cardData != null && cardData.cardBackside != null)
@@ -105,6 +114,19 @@ public class Card : MonoBehaviour
             // Slightly red tint for blocked cards
             spriteRenderer.color = new Color(1f, 0.7f, 0.7f, 1f);
         }
+    }
+    
+    // Face-down state management (for end cards)
+    public void SetFaceDown(bool faceDown)
+    {
+        isFaceDown = faceDown;
+        UpdateSprite();
+        Debug.Log($"Card {cardData.cardName} face-down state set to: {faceDown}");
+    }
+    
+    public bool IsFaceDown()
+    {
+        return isFaceDown;
     }
     
     // Rotate the card 180 degrees

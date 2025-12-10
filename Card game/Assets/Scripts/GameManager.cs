@@ -142,14 +142,41 @@ public class GameManager : MonoBehaviour
             endCardObj.transform.rotation = Quaternion.Euler(90, 0, 0);
             endCardObj.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
             endCardObj.SetActive(true);
+            
+            // Set end cards to be face-down initially
+            Card cardComponent = endCardObj.GetComponent<Card>();
+            if (cardComponent != null)
+            {
+                cardComponent.SetFaceDown(true);
+            }
+            
             playedCards[row, endColumn] = endCardObj;
             cardPositions[endCardObj] = new Vector2Int(endColumn, row);
             gridSlotObjects[row, endColumn]?.GetComponent<GridSlot>()?.ShowAsOccupied();
             
-            Debug.Log($"End card placed at row {row}, col {endColumn}");
+            Debug.Log($"End card placed face-down at row {row}, col {endColumn}");
         }
 
-        Debug.Log($"Correct end is at row {correctEndRow}");
+        Debug.Log($"Correct end is at row {correctEndRow} (hidden)");
+    }
+    
+    /// <summary>
+    /// Reveal an end card (used by Peek ability)
+    /// </summary>
+    public void RevealEndCard(int row)
+    {
+        int endColumn = gridZ - 1;
+        GameObject endCard = playedCards[row, endColumn];
+        
+        if (endCard != null)
+        {
+            Card cardComponent = endCard.GetComponent<Card>();
+            if (cardComponent != null && cardComponent.cardData.isEnd)
+            {
+                cardComponent.SetFaceDown(false);
+                Debug.Log($"Revealed end card at row {row}");
+            }
+        }
     }
 
     public void DrawUntilFullHand()
