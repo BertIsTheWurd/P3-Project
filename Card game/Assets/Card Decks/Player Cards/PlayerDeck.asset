@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7dd41d8909843486ba3c3c47dcbb8468, type: 3}
-  m_Name: DeckDefinition
+  m_Name: PlayerDeck
   m_EditorClassIdentifier: Assembly-CSharp::DeckDefinition
   cards:
   - {fileID: 11400000, guid: 594793e76af714a62b8fb2b2572232b1, type: 2}
@@ -21,4 +21,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: cb7c8672d69a6430a9ca74673be34e85, type: 2}
   - {fileID: 11400000, guid: c8104128090934a03ab8c7975f7d0f93, type: 2}
   - {fileID: 11400000, guid: 082eae0feba604a4a9dfdb11d0d368e0, type: 2}
-  quantities: 0500000005000000040000000300000004000000050000000500000006000000
+  - {fileID: 11400000, guid: 029f2fc7b6bbb4085824da7cbd6eacf4, type: 2}
+  - {fileID: 11400000, guid: fee78c33c7f704985ad2eddde3b86a3a, type: 2}
+  quantities: 05000000050000000400000003000000040000000500000005000000050000000200000002000000

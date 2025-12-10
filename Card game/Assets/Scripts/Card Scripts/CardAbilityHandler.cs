@@ -88,7 +88,7 @@ public class CardAbilityHandler : MonoBehaviour
     }
     
     /// <summary>
-    /// Remove a Censor card with Uncensor
+    /// Remove a Censor from a censored card with Uncensor
     /// </summary>
     private IEnumerator RemoveCensor(GameObject targetCard)
     {
@@ -105,32 +105,22 @@ public class CardAbilityHandler : MonoBehaviour
             yield break;
         }
         
-        CardType targetType = card.cardData.cardType;
-        if (targetType != CardType.Censor)
+        Debug.Log($"📰 Uncensor: Removing censor from card");
+        
+        // Use CensorHandler to remove censor
+        CensorHandler censorHandler = FindObjectOfType<CensorHandler>();
+        if (censorHandler != null)
         {
-            Debug.LogWarning($"Uncensor: Cannot remove card type: {targetType}");
-            yield break;
+            censorHandler.RemoveCensor(targetCard);
+        }
+        else
+        {
+            // Fallback: directly remove censored state
+            card.isCensored = false;
         }
         
-        Debug.Log($"📰 Uncensor: Removing {targetType} at {targetCard.transform.position}");
-        
-        // If it's a Censor, un-disable the card it was censoring
-        if (targetType == CardType.Censor)
-        {
-            // The target card would have been disabled - we need to find it and re-enable it
-            // This would require additional tracking, for now just remove the censor
-        }
-        
-        // Animate removal
-        yield return AnimateCardRemoval(targetCard);
-        
-        // Remove from grid
-        gameManager.RemoveCard(targetCard);
-        
-        // Return to discard
-        gameManager.discardPile.AddToDiscard(targetCard);
-        
-        Debug.Log($"✅ {targetType} removed!");
+        Debug.Log("✅ Censor removed!");
+        yield return new WaitForSeconds(abilityAnimationDuration);
     }
     
     /// <summary>
@@ -198,7 +188,8 @@ public class CardAbilityHandler : MonoBehaviour
     }
     
     /// <summary>
-    /// Censor a card (disable it)
+    /// Censor a card (disable it with overlay)
+    /// Note: This is primarily called from SupervisorAI, which handles placement
     /// </summary>
     private IEnumerator CensorCard(GameObject targetCard)
     {
@@ -217,13 +208,11 @@ public class CardAbilityHandler : MonoBehaviour
         
         Debug.Log($"🚫 Censor: Disabling card {card.cardData.cardName}");
         
-        // Animate censoring
-        yield return AnimateCensor(targetCard);
-        
-        // Disable the card
-        card.SetDisabled(true);
+        // Mark as censored (physical placement handled by SupervisorAI)
+        card.isCensored = true;
         
         Debug.Log("✅ Card censored!");
+        yield return new WaitForSeconds(abilityAnimationDuration);
     }
     
     // Animation helpers

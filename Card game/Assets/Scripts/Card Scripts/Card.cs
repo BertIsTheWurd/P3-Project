@@ -19,6 +19,13 @@ public class Card : MonoBehaviour
     private bool isDisabled = false;     // Card is disabled by Censor
     private bool isFaceDown = false;     // Card is face-down (for end cards before Peek)
     private CardType blockingCardType;   // What type of card is blocking this?
+    
+    // Public property for censored state
+    public bool isCensored
+    {
+        get { return isDisabled; }
+        set { isDisabled = value; }
+    }
 
     private void Awake()
     {
@@ -58,10 +65,30 @@ public class Card : MonoBehaviour
             if (isFaceDown && cardData.cardBackside != null)
             {
                 spriteRenderer.sprite = cardData.cardBackside;
+                
+                // WORKAROUND: Compensate for different sprite dimensions
+                // If backside sprite has different Pixels Per Unit, adjust scale
+                if (cardData.cardImage != null)
+                {
+                    float frontPPU = cardData.cardImage.pixelsPerUnit;
+                    float backPPU = cardData.cardBackside.pixelsPerUnit;
+                    
+                    // Calculate scale compensation
+                    float scaleCompensation = backPPU / frontPPU;
+                    
+                    // Apply compensated scale (base scale 0.25f * compensation)
+                    float finalScale = 0.25f * scaleCompensation;
+                    transform.localScale = new Vector3(finalScale, finalScale, finalScale);
+                    
+                    Debug.Log($"Card back scale compensation: {scaleCompensation} (final scale: {finalScale})");
+                }
             }
             else
             {
                 spriteRenderer.sprite = cardData.cardImage;
+                
+                // Reset to standard grid scale
+                transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
                 
                 // Apply card tint if specified
                 if (cardData.cardTint != Color.white)

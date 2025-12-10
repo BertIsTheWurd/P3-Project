@@ -233,11 +233,47 @@ public class SupervisorAI : MonoBehaviour
     /// <summary>
     /// Get all valid positions where this card can be placed
     /// Supervisor can only place cards adjacent to player's existing cards (not start/end)
+    /// Exception: Censor cards can target any player card on the grid
     /// </summary>
     private List<Vector2Int> GetValidPlacementPositions(GameObject card)
     {
         List<Vector2Int> validPositions = new List<Vector2Int>();
         
+        Card cardComponent = card.GetComponent<Card>();
+        if (cardComponent == null) return validPositions;
+        
+        // Special case: Censor cards target existing player cards
+        if (cardComponent.cardData.cardType == CardType.Censor)
+        {
+            CensorHandler censorHandler = FindObjectOfType<CensorHandler>();
+            if (censorHandler != null)
+            {
+                // Find all non-censored player cards
+                for (int row = 0; row < gameManager.gridX; row++)
+                {
+                    for (int col = 0; col < gameManager.gridZ; col++)
+                    {
+                        GameObject targetCard = gameManager.playedCards[row, col];
+                        if (targetCard != null)
+                        {
+                            Card target = targetCard.GetComponent<Card>();
+                            if (target != null 
+                                && target.cardData.cardOwner == CardOwner.Player
+                                && !target.cardData.isStart
+                                && !target.cardData.isEnd
+                                && !censorHandler.IsCensored(targetCard))
+                            {
+                                // Vector2Int is (col, row) or (x, y)
+                                validPositions.Add(new Vector2Int(col, row));
+                            }
+                        }
+                    }
+                }
+            }
+            return validPositions;
+        }
+        
+        // Normal card placement logic (adjacent to player cards)
         for (int row = 0; row < gameManager.gridX; row++)
         {
             for (int col = 0; col < gameManager.gridZ; col++)
@@ -448,10 +484,50 @@ public class SupervisorAI : MonoBehaviour
         // Remove from Supervisor's hand
         supervisorHand.Remove(card);
         
-        // Place on grid using GameManager
-        gameManager.PlayCard(card, position.x, position.y);
+        Card cardComponent = card.GetComponent<Card>();
         
-        Debug.Log($"🎭 Supervisor placed {card.GetComponent<Card>().cardData.cardName} at ({position.x}, {position.y})");
+        // Check if this is a Censor card
+        if (cardComponent != null && cardComponent.cardData.cardType == CardType.Censor)
+        {
+            // Censor cards are placed ON TOP of existing cards, not in a new grid slot
+            Debug.Log($"🎭 Supervisor attempting to censor at position ({position.x}, {position.y}) = array index [{ position.y}, {position.x}]");
+            GameObject targetCard = gameManager.playedCards[position.y, position.x];
+            
+            if (targetCard != null)
+            {
+                Card targetCardComponent = targetCard.GetComponent<Card>();
+                Debug.Log($"🎭 Supervisor censoring card at ({position.x}, {position.y}) - Target: {(targetCardComponent != null ? targetCardComponent.cardData.cardName : "UNKNOWN")}");
+                
+                // Position the Censor card on top of the target card
+                card.transform.position = targetCard.transform.position + new Vector3(0, 0.02f, 0);
+                card.transform.rotation = Quaternion.Euler(90, 0, 0); // Lie flat
+                card.transform.localScale = Vector3.one * 0.25f;
+                
+                // Mark the target card as censored
+                if (targetCardComponent != null)
+                {
+                    targetCardComponent.isCensored = true;
+                }
+                
+                // Track the censor overlay in CensorHandler
+                CensorHandler censorHandler = FindObjectOfType<CensorHandler>();
+                if (censorHandler != null)
+                {
+                    // Store the censor card object so we can remove it later
+                    censorHandler.PlaceCensor(targetCard, card);
+                }
+            }
+            else
+            {
+                Debug.LogError($"❌ CENSOR TARGET IS NULL at position ({position.x}, {position.y})!");
+            }
+        }
+        else
+        {
+            // Normal card placement
+            gameManager.PlayCard(card, position.x, position.y);
+            Debug.Log($"🎭 Supervisor placed {cardComponent.cardData.cardName} at ({position.x}, {position.y})");
+        }
         
         // Check if this placement blocked all paths to correct exit
         gameManager.CheckForGameOver();

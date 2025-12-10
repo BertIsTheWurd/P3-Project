@@ -597,9 +597,10 @@ public class GameManager : MonoBehaviour
                 if (neighbor != null)
                 {
                     var neighborCard = neighbor.GetComponent<Card>();
-                    // Only traverse if it's not a DeadEnd and connects properly
+                    // Don't traverse through DeadEnd or BureaucraticBarrier cards
                     if (neighborCard != null 
-                        && neighborCard.cardData.cardType != CardType.DeadEnd 
+                        && neighborCard.cardData.cardType != CardType.DeadEnd
+                        && neighborCard.cardData.cardType != CardType.BureaucraticBarrier
                         && neighborCard.ConnectsDown)
                     {
                         queue.Enqueue((row - 1, col));
@@ -615,7 +616,8 @@ public class GameManager : MonoBehaviour
                 {
                     var neighborCard = neighbor.GetComponent<Card>();
                     if (neighborCard != null 
-                        && neighborCard.cardData.cardType != CardType.DeadEnd 
+                        && neighborCard.cardData.cardType != CardType.DeadEnd
+                        && neighborCard.cardData.cardType != CardType.BureaucraticBarrier
                         && neighborCard.ConnectsUp)
                     {
                         queue.Enqueue((row + 1, col));
@@ -631,7 +633,8 @@ public class GameManager : MonoBehaviour
                 {
                     var neighborCard = neighbor.GetComponent<Card>();
                     if (neighborCard != null 
-                        && neighborCard.cardData.cardType != CardType.DeadEnd 
+                        && neighborCard.cardData.cardType != CardType.DeadEnd
+                        && neighborCard.cardData.cardType != CardType.BureaucraticBarrier
                         && neighborCard.ConnectsRight)
                     {
                         queue.Enqueue((row, col - 1));
@@ -647,7 +650,8 @@ public class GameManager : MonoBehaviour
                 {
                     var neighborCard = neighbor.GetComponent<Card>();
                     if (neighborCard != null 
-                        && neighborCard.cardData.cardType != CardType.DeadEnd 
+                        && neighborCard.cardData.cardType != CardType.DeadEnd
+                        && neighborCard.cardData.cardType != CardType.BureaucraticBarrier
                         && neighborCard.ConnectsLeft)
                     {
                         queue.Enqueue((row, col + 1));

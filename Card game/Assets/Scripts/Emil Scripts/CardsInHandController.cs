@@ -123,6 +123,36 @@ public class CardsInHandController : MonoBehaviour {
             }
         }
         
+        // Check if this is a Warrant card
+        if (cardComponent != null && cardComponent.cardData.cardType == CardType.Warrant)
+        {
+            // Start warrant selection process
+            WarrantHandler warrantHandler = FindObjectOfType<WarrantHandler>();
+            if (warrantHandler != null)
+            {
+                warrantHandler.BeginBarrierSelection(currentlySelectedCard);
+                // Don't do the normal selection animation for Warrant cards
+                currentCardIndex = -1;
+                currentlySelectedCard = null;
+                return;
+            }
+        }
+        
+        // Check if this is an Uncensor card
+        if (cardComponent != null && cardComponent.cardData.cardType == CardType.Uncensor)
+        {
+            // Start uncensor selection process
+            UncensorHandler uncensorHandler = FindObjectOfType<UncensorHandler>();
+            if (uncensorHandler != null)
+            {
+                uncensorHandler.BeginUncensorSelection(currentlySelectedCard);
+                // Don't do the normal selection animation for Uncensor cards
+                currentCardIndex = -1;
+                currentlySelectedCard = null;
+                return;
+            }
+        }
+        
         // Set up animation targets
         targetPosition = CalculateCardPosition(currentCardIndex);
         targetPosition.y += selectedCardYOffset;
