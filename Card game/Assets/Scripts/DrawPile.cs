@@ -1,4 +1,3 @@
-
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,7 +7,7 @@ public class DrawPile : MonoBehaviour
     public DiscardPile discardPile;
     public Transform drawAnchor;
 
-    [Header("Visual Settings")] public float cardStackOffsetZ = -0.05f;
+    [Header("Visual Settings")] 
     public float cardStackOffsetY = 0.02f;
     public bool showDrawPile = true;
 
@@ -30,10 +29,10 @@ public class DrawPile : MonoBehaviour
             card.transform.localPosition = new Vector3(
                 0,
                 cardCount * cardStackOffsetY,
-                cardCount * cardStackOffsetZ
+                0  // No Z offset - cards stack straight up
             );
      
-            card.transform.localRotation = Quaternion.identity;
+            card.transform.localRotation = Quaternion.Euler(90, 0, 0);  // Lie flat on table
             card.transform.localScale = drawPileCardScale; // instead of Vector3.one
 
 
@@ -71,9 +70,9 @@ public class DrawPile : MonoBehaviour
                 card.transform.localPosition = new Vector3(
                     0,
                     stackIndex * cardStackOffsetY,
-                    stackIndex * cardStackOffsetZ
+                    0  // No Z offset - cards stack straight up
                 );
-                card.transform.localRotation = Quaternion.identity;
+                card.transform.localRotation = Quaternion.Euler(90, 0, 0);  // Lie flat on table
                 card.tag = "DrawPile";
 
                 var cardComponent = card.GetComponent<Card>();

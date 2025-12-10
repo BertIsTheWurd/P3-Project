@@ -362,6 +362,14 @@ public class GameManager : MonoBehaviour
         
         // Keep the scale consistent with other cards on the grid (0.25, 0.25, 0.25)
         cardObj.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
+        
+        // Reset color to white (remove any selection tint)
+        var spriteRenderer = cardObj.GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = Color.white;
+        }
+        
         cardObj.tag = "PlayedCard";
         cardObj.SetActive(true);
         playedCards[row, col] = cardObj;
@@ -517,29 +525,61 @@ public class GameManager : MonoBehaviour
         
         Debug.Log($"💀 Removing card at row {row}, col {col}");
         
-        // Animate the card disappearing (shrink and fade)
-        float elapsedTime = 0f;
-        Vector3 originalScale = cardToRemove.transform.localScale;
+        // Store original state
+        Vector3 startPosition = cardToRemove.transform.position;
+        Quaternion startRotation = cardToRemove.transform.rotation;
+        Vector3 startScale = cardToRemove.transform.localScale;
+        
+        // Calculate target position (discard pile location)
+        Vector3 targetPosition = discardPile.discardAnchor.position;
+        // Add offset for stacking
+        targetPosition.y += discardPile.discardPile.Count * discardPile.cardStackOffset;
+        
+        Quaternion targetRotation = Quaternion.Euler(discardPile.discardPileRotation);
+        Vector3 targetScale = discardPile.discardPileScale;
+        
+        // Get sprite renderer for potential color effects
         SpriteRenderer spriteRenderer = cardToRemove.GetComponent<SpriteRenderer>();
         Color originalColor = spriteRenderer != null ? spriteRenderer.color : Color.white;
+        
+        // Animate the card moving to discard pile
+        float elapsedTime = 0f;
         
         while (elapsedTime < sabotageAnimationDuration)
         {
             elapsedTime += Time.deltaTime;
             float t = elapsedTime / sabotageAnimationDuration;
             
-            // Shrink the card
-            cardToRemove.transform.localScale = Vector3.Lerp(originalScale, Vector3.zero, t);
+            // Use ease-in curve for more natural movement
+            float easedT = t * t; // Quadratic ease-in
             
-            // Fade out
+            // Move card to discard pile
+            cardToRemove.transform.position = Vector3.Lerp(startPosition, targetPosition, easedT);
+            cardToRemove.transform.rotation = Quaternion.Lerp(startRotation, targetRotation, easedT);
+            cardToRemove.transform.localScale = Vector3.Lerp(startScale, targetScale, easedT);
+            
+            // Optional: slight fade during movement (makes it look smoother)
             if (spriteRenderer != null)
             {
                 Color newColor = originalColor;
-                newColor.a = Mathf.Lerp(1f, 0f, t);
+                newColor.a = Mathf.Lerp(1f, 0.7f, easedT); // Fade to 70% opacity
                 spriteRenderer.color = newColor;
             }
             
             yield return null;
+        }
+        
+        // Ensure final position is exact
+        cardToRemove.transform.position = targetPosition;
+        cardToRemove.transform.rotation = targetRotation;
+        cardToRemove.transform.localScale = targetScale;
+        
+        // Restore full opacity
+        if (spriteRenderer != null)
+        {
+            Color newColor = originalColor;
+            newColor.a = 1f;
+            spriteRenderer.color = newColor;
         }
         
         // Remove from grid
@@ -549,7 +589,7 @@ public class GameManager : MonoBehaviour
         // Show grid slot as empty again
         gridSlotObjects[row, col]?.GetComponent<GridSlot>()?.ShowAsEmpty();
         
-        // Return card to discard pile
+        // Add to discard pile (this will set parent, tag, etc.)
         discardPile.AddToDiscard(cardToRemove);
         
         // Clear last played card reference

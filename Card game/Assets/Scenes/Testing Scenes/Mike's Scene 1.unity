@@ -335,7 +335,7 @@ Transform:
   m_GameObject: {fileID: 374722152}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.17364816, z: 0, w: 0.9848078}
-  m_LocalPosition: {x: 4, y: 0, z: -2.5}
+  m_LocalPosition: {x: 4, y: -0.2, z: -2.5}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 1
   m_Children: []
@@ -1034,7 +1034,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DrawPile
   discardPile: {fileID: 374722153}
   drawAnchor: {fileID: 1576927272}
-  cardStackOffsetZ: 0.05
   cardStackOffsetY: 0.01
   showDrawPile: 1
   drawPileCardScale: {x: 0.25, y: 0.25, z: 0.25}
@@ -1046,13 +1045,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1576927270}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.6963643, y: 0.122787856, z: -0.122787856, w: 0.6963643}
-  m_LocalPosition: {x: 3, y: 0, z: -2}
+  m_LocalRotation: {x: 0, y: 0.17364816, z: 0, w: 0.9848078}
+  m_LocalPosition: {x: 3, y: -0.2, z: -2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 90, y: 0, z: -20}
+  m_LocalEulerAnglesHint: {x: 0, y: 20, z: 0}
 --- !u!1 &1708531457
 GameObject:
   m_ObjectHideFlags: 0
