@@ -202,6 +202,12 @@ public class UncensorHandler : MonoBehaviour
         
         Debug.Log("✅ Card uncensored!");
         
+        // Re-validate path since uncensoring may complete a path
+        if (gameManager != null)
+        {
+            gameManager.RevalidatePath();
+        }
+        
         // Remove uncensor card from hand and discard it
         CardsInHandController handController = FindObjectOfType<CardsInHandController>();
         

@@ -24,9 +24,13 @@ public class GameManager : MonoBehaviour
     public DrawPile drawPile;
     public DiscardPile discardPile;
     public CardsInHandController handController;
+    public VictoryUI victoryUI;
     public GameObject[,] playedCards;
     public Vector3[,] cardSlots;
     private GameObject[,] gridSlotObjects;
+    
+    // Performance: Cache Card components to avoid expensive GetComponent calls in pathfinding
+    private Dictionary<GameObject, Card> cardCache = new Dictionary<GameObject, Card>();
 
     [Header("Player Settings")]
     public int HandSize = 6;
@@ -35,17 +39,20 @@ public class GameManager : MonoBehaviour
     private UdpClient udpClient;
     public int port = 5005;
     public bool lookingAway = false;
+    private bool previousLookingAwayState = false; // Track state changes
 
     [Header("Looking Away Sabotage")]
-    public float sabotageCheckDelay = 2f; // Seconds after placing card before checking
+    public float sabotageCheckInterval = 0.5f; // How often to check if player is looking away
+    public float sabotageGracePeriod = 2f; // How long player can look away before sabotage
     public float sabotageAnimationDuration = 1f; // How long the removal animation takes
-    private bool canSabotageThisTurn = true; // Reset after each card placement
-    private Coroutine sabotageCheckCoroutine;
+    private float lookingAwayTimer = 0f; // How long player has been looking away
+    private bool isSabotageActive = false; // Prevent multiple simultaneous sabotages
 
     private int correctEndRow = -1;
     
     // Track last played card and all card positions
     public GameObject lastPlayedCard;
+    public GameObject lastPlayerCard; // Track last PLAYER card specifically for sabotage
     private Dictionary<GameObject, Vector2Int> cardPositions = new Dictionary<GameObject, Vector2Int>();
 
     private void Start()
@@ -57,6 +64,32 @@ public class GameManager : MonoBehaviour
         CreateGridSlots();
         PlaceStartAndEndCards();
         StartCoroutine(InitializeGameAfterCardPool());
+    }
+    
+    private void Update()
+    {
+        // Continuously monitor looking away state
+        if (lookingAway && lastPlayerCard != null && !isSabotageActive)
+        {
+            // Player is looking away - increment timer
+            lookingAwayTimer += Time.deltaTime;
+            
+            // Check if grace period has expired
+            if (lookingAwayTimer >= sabotageGracePeriod)
+            {
+                Debug.Log($"Sabotage triggered - player looked away for {lookingAwayTimer:F1}s");
+                StartCoroutine(ExecuteSabotage());
+            }
+        }
+        else
+        {
+            // Player is looking at screen or no player card to sabotage - reset timer
+            if (lookingAwayTimer > 0)
+            {
+                Debug.Log($"Sabotage timer reset - player returned after {lookingAwayTimer:F1}s");
+            }
+            lookingAwayTimer = 0f;
+        }
     }
 
     private System.Collections.IEnumerator InitializeGameAfterCardPool()
@@ -128,6 +161,13 @@ public class GameManager : MonoBehaviour
         cardPositions[startCardObj] = new Vector2Int(startCol, startRow);
         gridSlotObjects[startRow, startCol]?.GetComponent<GridSlot>()?.ShowAsOccupied();
         
+        // Cache the start card for pathfinding
+        Card startCardComponent = startCardObj.GetComponent<Card>();
+        if (startCardComponent != null)
+        {
+            cardCache[startCardObj] = startCardComponent;
+        }
+        
         Debug.Log($"Start card placed at row {startRow}, col {startCol}");
 
         int[] endRows = { 0, 2, 4 };  // Top, middle, bottom of 5 rows
@@ -148,6 +188,8 @@ public class GameManager : MonoBehaviour
             if (cardComponent != null)
             {
                 cardComponent.SetFaceDown(true);
+                // Cache the end card for pathfinding
+                cardCache[endCardObj] = cardComponent;
             }
             
             playedCards[row, endColumn] = endCardObj;
@@ -378,19 +420,28 @@ public class GameManager : MonoBehaviour
         cardPositions[cardObj] = new Vector2Int(col, row);
         lastPlayedCard = cardObj;
         
-        // Enable sabotage for this turn (new card placed)
-        canSabotageThisTurn = true;
-        
-        // Stop any existing sabotage check and start a new one
-        if (sabotageCheckCoroutine != null)
+        // Cache Card component for performance (avoids GetComponent in pathfinding)
+        Card cardComponent = cardObj.GetComponent<Card>();
+        if (cardComponent != null)
         {
-            StopCoroutine(sabotageCheckCoroutine);
+            cardCache[cardObj] = cardComponent;
         }
-        sabotageCheckCoroutine = StartCoroutine(CheckForSabotage());
+        
+        // Track last PLAYER card specifically for sabotage
+        if (cardComponent != null && cardComponent.cardData != null && cardComponent.cardData.cardOwner == CardOwner.Player)
+        {
+            lastPlayerCard = cardObj;
+            Debug.Log($"Player card tracked at ({col}, {row}) for sabotage monitoring");
+            // Note: Sabotage is now handled continuously in Update(), not on card placement
+        }
+        else
+        {
+            Debug.Log($"Supervisor card placed at ({col}, {row})");
+        }
         
         gridSlotObjects[row, col]?.GetComponent<GridSlot>()?.ShowAsOccupied();
 
-        Debug.Log($"Card successfully played at row {row}, col {col}");
+        Debug.Log($"Card successfully placed at ({col}, {row})");
         
         DrawUntilFullHand();
 
@@ -399,12 +450,12 @@ public class GameManager : MonoBehaviour
         {
             if (pathResult.isCorrect)
             {
-                Debug.Log("🎉 Path complete! You found the CORRECT exit!");
+                Debug.Log("Path complete - CORRECT exit found!");
                 OnVictory();
             }
             else
             {
-                Debug.Log("❌ Path complete, but this is the WRONG exit!");
+                Debug.Log("Path complete - WRONG exit reached!");
                 OnWrongExit();
             }
         }
@@ -440,11 +491,17 @@ public class GameManager : MonoBehaviour
             Vector2Int pos = cardPositions[card];
             playedCards[pos.y, pos.x] = null;
             cardPositions.Remove(card);
+            cardCache.Remove(card); // Clear from performance cache
             gridSlotObjects[pos.y, pos.x]?.GetComponent<GridSlot>()?.ShowAsEmpty();
             
             if (lastPlayedCard == card)
             {
                 lastPlayedCard = null;
+            }
+            
+            if (lastPlayerCard == card)
+            {
+                lastPlayerCard = null;
             }
             
             Debug.Log($"Removed card from row {pos.y}, col {pos.x}");
@@ -471,14 +528,34 @@ public class GameManager : MonoBehaviour
             if (visited.Contains((row, col))) continue;
             visited.Add((row, col));
 
-            var currentCard = playedCards[row, col].GetComponent<Card>();
+            GameObject cardObj = playedCards[row, col];
+            if (!cardCache.TryGetValue(cardObj, out Card currentCard)) continue;
+            
+            // Skip blocking cards - they break the path (except for start/end cards)
+            if (!currentCard.cardData.isStart && !currentCard.cardData.isEnd)
+            {
+                // Check if card is a blocking type
+                if (currentCard.cardData.cardType == CardType.DeadEnd ||
+                    currentCard.cardData.cardType == CardType.BureaucraticBarrier)
+                {
+                    Debug.Log($"Path blocked by {currentCard.cardData.cardType} at row {row}, col {col}");
+                    continue; // Don't traverse through blocking cards
+                }
+                
+                // Check if card is censored (blocked until uncensored)
+                if (currentCard.isCensored)
+                {
+                    Debug.Log($"Path blocked by censored card at row {row}, col {col}");
+                    continue; // Don't traverse through censored cards
+                }
+            }
             
             // Check if we're passing through a wrong exit (not at final column)
             if (currentCard.cardData.isEnd && col < gridZ - 1)
             {
                 if (row != correctEndRow)
                 {
-                    Debug.LogWarning($"⚠️ Path crosses wrong exit at row {row}, col {col}");
+                    Debug.LogWarning($"Path validation - wrong exit crossed at ({col}, {row})");
                     crossedWrongExit = true;
                 }
             }
@@ -496,29 +573,37 @@ public class GameManager : MonoBehaviour
                 }
                 
                 // Don't return immediately - continue exploring to find all exits
-                // Continue to next iteration to explore other paths
                 continue;
             }
 
+            // Check neighbors using cache - also check for blocking cards
             if (currentCard.ConnectsUp && row > 0 && playedCards[row - 1, col] != null)
             {
-                var neighbor = playedCards[row - 1, col].GetComponent<Card>();
-                if (neighbor.ConnectsDown) queue.Enqueue((row - 1, col));
+                if (cardCache.TryGetValue(playedCards[row - 1, col], out Card neighbor) && neighbor.ConnectsDown)
+                {
+                    queue.Enqueue((row - 1, col));
+                }
             }
             if (currentCard.ConnectsDown && row < gridX - 1 && playedCards[row + 1, col] != null)
             {
-                var neighbor = playedCards[row + 1, col].GetComponent<Card>();
-                if (neighbor.ConnectsUp) queue.Enqueue((row + 1, col));
+                if (cardCache.TryGetValue(playedCards[row + 1, col], out Card neighbor) && neighbor.ConnectsUp)
+                {
+                    queue.Enqueue((row + 1, col));
+                }
             }
             if (currentCard.ConnectsLeft && col > 0 && playedCards[row, col - 1] != null)
             {
-                var neighbor = playedCards[row, col - 1].GetComponent<Card>();
-                if (neighbor.ConnectsRight) queue.Enqueue((row, col - 1));
+                if (cardCache.TryGetValue(playedCards[row, col - 1], out Card neighbor) && neighbor.ConnectsRight)
+                {
+                    queue.Enqueue((row, col - 1));
+                }
             }
             if (currentCard.ConnectsRight && col < gridZ - 1 && playedCards[row, col + 1] != null)
             {
-                var neighbor = playedCards[row, col + 1].GetComponent<Card>();
-                if (neighbor.ConnectsLeft) queue.Enqueue((row, col + 1));
+                if (cardCache.TryGetValue(playedCards[row, col + 1], out Card neighbor) && neighbor.ConnectsLeft)
+                {
+                    queue.Enqueue((row, col + 1));
+                }
             }
         }
         
@@ -527,16 +612,16 @@ public class GameManager : MonoBehaviour
         {
             if (crossedWrongExit)
             {
-                Debug.Log("❌ Path reached correct exit but crossed wrong exit - INVALID");
+                Debug.Log("Path validation failed - crossed wrong exit before reaching correct exit");
                 return (true, false);
             }
-            Debug.Log("✅ Path reached correct exit!");
+            Debug.Log("Path validation success - correct exit reached");
             return (true, true);
         }
         
         if (reachedWrongExit)
         {
-            Debug.Log("❌ Path reached wrong exit");
+            Debug.Log("Path validation failed - wrong exit reached");
             return (true, false);
         }
 
@@ -544,21 +629,20 @@ public class GameManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Check if the correct exit is still reachable from start
-    /// Returns true if a path exists (even if not yet complete)
-    /// Returns false if completely blocked
+    /// Check if the correct exit is still reachable from start.
+    /// This does a flood-fill that can pass through empty slots (potential paths)
+    /// but is blocked by DeadEnd and BureaucraticBarrier cards.
+    /// Returns true if a path to the correct exit could potentially exist.
+    /// Returns false if blocking cards have completely walled off the correct exit.
     /// </summary>
     private bool IsCorrectExitReachable()
     {
         int startRow = gridX / 2;
         int startCol = 0;
         
-        if (playedCards[startRow, startCol] == null)
-        {
-            return true; // Game just started, exit is potentially reachable
-        }
-        
-        // BFS to see if we can reach the correct exit
+        // BFS flood-fill to see if we can reach the correct exit position
+        // We can pass through: empty slots, valid path cards, start card
+        // We are blocked by: DeadEnd, BureaucraticBarrier
         HashSet<(int row, int col)> visited = new HashSet<(int, int)>();
         Queue<(int row, int col)> queue = new Queue<(int, int)>();
         queue.Enqueue((startRow, startCol));
@@ -569,90 +653,113 @@ public class GameManager : MonoBehaviour
             if (visited.Contains((row, col))) continue;
             visited.Add((row, col));
             
-            // Check if we reached the correct exit
+            // Check if we reached the correct exit position
             if (row == correctEndRow && col == gridZ - 1)
             {
-                var cardAtExit = playedCards[row, col];
-                if (cardAtExit != null)
-                {
-                    Card exitCard = cardAtExit.GetComponent<Card>();
-                    if (exitCard != null && exitCard.cardData.isEnd)
-                    {
-                        return true; // Correct exit is reachable!
-                    }
-                }
-                // Empty slot at correct exit location - potentially reachable
-                return true;
+                return true; // Correct exit is reachable!
             }
             
-            // Only explore through PLACED cards, not empty slots
-            // This is stricter - if you can't currently reach it with placed cards, it's blocked
-            var currentCard = playedCards[row, col]?.GetComponent<Card>();
+            var currentCardObj = playedCards[row, col];
+            
+            // If this slot is empty, we can potentially go any direction from here
+            if (currentCardObj == null)
+            {
+                // Explore all 4 directions from empty slots
+                if (row > 0) queue.Enqueue((row - 1, col));
+                if (row < gridX - 1) queue.Enqueue((row + 1, col));
+                if (col > 0) queue.Enqueue((row, col - 1));
+                if (col < gridZ - 1) queue.Enqueue((row, col + 1));
+                continue;
+            }
+            
+            var currentCard = currentCardObj.GetComponent<Card>();
             if (currentCard == null) continue;
             
-            // Check Up
-            if (currentCard.ConnectsUp && row > 0)
+            // Check if this card is a blocking type (stops flood-fill here)
+            // Start and end cards never block
+            if (!currentCard.cardData.isStart && !currentCard.cardData.isEnd)
+            {
+                if (currentCard.cardData.cardType == CardType.DeadEnd ||
+                    currentCard.cardData.cardType == CardType.BureaucraticBarrier)
+                {
+                    // This card blocks passage - don't explore further from here
+                    continue;
+                }
+            }
+            
+            // For placed cards, explore in all directions
+            // (we're checking reachability, not valid path connections)
+            if (row > 0) 
             {
                 var neighbor = playedCards[row - 1, col];
-                if (neighbor != null)
+                // Can go to empty slot or non-blocking card
+                if (neighbor == null)
+                {
+                    queue.Enqueue((row - 1, col));
+                }
+                else
                 {
                     var neighborCard = neighbor.GetComponent<Card>();
-                    // Don't traverse through DeadEnd or BureaucraticBarrier cards
-                    if (neighborCard != null 
-                        && neighborCard.cardData.cardType != CardType.DeadEnd
-                        && neighborCard.cardData.cardType != CardType.BureaucraticBarrier
-                        && neighborCard.ConnectsDown)
+                    if (neighborCard != null &&
+                        neighborCard.cardData.cardType != CardType.DeadEnd &&
+                        neighborCard.cardData.cardType != CardType.BureaucraticBarrier)
                     {
                         queue.Enqueue((row - 1, col));
                     }
                 }
             }
             
-            // Check Down
-            if (currentCard.ConnectsDown && row < gridX - 1)
+            if (row < gridX - 1)
             {
                 var neighbor = playedCards[row + 1, col];
-                if (neighbor != null)
+                if (neighbor == null)
+                {
+                    queue.Enqueue((row + 1, col));
+                }
+                else
                 {
                     var neighborCard = neighbor.GetComponent<Card>();
-                    if (neighborCard != null 
-                        && neighborCard.cardData.cardType != CardType.DeadEnd
-                        && neighborCard.cardData.cardType != CardType.BureaucraticBarrier
-                        && neighborCard.ConnectsUp)
+                    if (neighborCard != null &&
+                        neighborCard.cardData.cardType != CardType.DeadEnd &&
+                        neighborCard.cardData.cardType != CardType.BureaucraticBarrier)
                     {
                         queue.Enqueue((row + 1, col));
                     }
                 }
             }
             
-            // Check Left
-            if (currentCard.ConnectsLeft && col > 0)
+            if (col > 0)
             {
                 var neighbor = playedCards[row, col - 1];
-                if (neighbor != null)
+                if (neighbor == null)
+                {
+                    queue.Enqueue((row, col - 1));
+                }
+                else
                 {
                     var neighborCard = neighbor.GetComponent<Card>();
-                    if (neighborCard != null 
-                        && neighborCard.cardData.cardType != CardType.DeadEnd
-                        && neighborCard.cardData.cardType != CardType.BureaucraticBarrier
-                        && neighborCard.ConnectsRight)
+                    if (neighborCard != null &&
+                        neighborCard.cardData.cardType != CardType.DeadEnd &&
+                        neighborCard.cardData.cardType != CardType.BureaucraticBarrier)
                     {
                         queue.Enqueue((row, col - 1));
                     }
                 }
             }
             
-            // Check Right
-            if (currentCard.ConnectsRight && col < gridZ - 1)
+            if (col < gridZ - 1)
             {
                 var neighbor = playedCards[row, col + 1];
-                if (neighbor != null)
+                if (neighbor == null)
+                {
+                    queue.Enqueue((row, col + 1));
+                }
+                else
                 {
                     var neighborCard = neighbor.GetComponent<Card>();
-                    if (neighborCard != null 
-                        && neighborCard.cardData.cardType != CardType.DeadEnd
-                        && neighborCard.cardData.cardType != CardType.BureaucraticBarrier
-                        && neighborCard.ConnectsLeft)
+                    if (neighborCard != null &&
+                        neighborCard.cardData.cardType != CardType.DeadEnd &&
+                        neighborCard.cardData.cardType != CardType.BureaucraticBarrier)
                     {
                         queue.Enqueue((row, col + 1));
                     }
@@ -660,7 +767,9 @@ public class GameManager : MonoBehaviour
             }
         }
         
-        return false; // Cannot reach correct exit with current placed cards
+        // Flood-fill couldn't reach the correct exit - it's blocked!
+        Debug.Log($"IsCorrectExitReachable: Flood-fill visited {visited.Count} cells but couldn't reach exit at row {correctEndRow}, col {gridZ - 1}");
+        return false;
     }
     
     /// <summary>
@@ -668,8 +777,8 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void OnGameOver()
     {
-        Debug.Log("💀 GAME OVER - All paths to the correct exit are blocked!");
-        Debug.Log("🎭 The Supervisor has successfully blocked your escape.");
+        Debug.Log("GAME OVER - All paths to correct exit are blocked");
+        Debug.Log("Supervisor successfully blocked all escape routes");
         
         // TODO: Show game over screen
         // TODO: Display message "The Supervisor blocked all paths"
@@ -690,30 +799,40 @@ public class GameManager : MonoBehaviour
         }
     }
     // Coroutine to check if player is looking away after placing a card
-    private System.Collections.IEnumerator CheckForSabotage()
+    private System.Collections.IEnumerator ExecuteSabotage()
     {
-        // Wait a bit after card placement before checking
-        yield return new UnityEngine.WaitForSeconds(sabotageCheckDelay);
+        isSabotageActive = true;
         
-        // Check if player is looking away AND sabotage hasn't happened this turn yet
-        if (lookingAway && canSabotageThisTurn && lastPlayedCard != null)
+        // Check if the last player card still exists on the grid
+        if (lastPlayerCard != null)
         {
-            Debug.Log("👁️ Player is looking away! Removing last played card...");
-            yield return StartCoroutine(RemoveLastPlayedCard());
-            canSabotageThisTurn = false; // Prevent multiple sabotages until next card is played
+            Card cardComponent = lastPlayerCard.GetComponent<Card>();
+            if (cardComponent != null && cardComponent.cardData != null)
+            {
+                Debug.Log($"Sabotage executing - removing player card: {cardComponent.cardData.cardName}");
+                yield return StartCoroutine(RemoveLastPlayedCard());
+            }
+            else
+            {
+                Debug.LogWarning("Sabotage failed - player card is invalid");
+            }
         }
+        
+        // Reset timer and flag
+        lookingAwayTimer = 0f;
+        isSabotageActive = false;
     }
     
     // Remove the last played card with animation
     private System.Collections.IEnumerator RemoveLastPlayedCard()
     {
-        if (lastPlayedCard == null)
+        if (lastPlayerCard == null)
         {
-            Debug.LogWarning("No last played card to remove!");
+            Debug.LogWarning("No last player card to remove!");
             yield break;
         }
         
-        GameObject cardToRemove = lastPlayedCard;
+        GameObject cardToRemove = lastPlayerCard;
         Vector2Int? cardPos = GetCardPosition(cardToRemove);
         
         if (!cardPos.HasValue)
@@ -725,7 +844,7 @@ public class GameManager : MonoBehaviour
         int col = cardPos.Value.x;
         int row = cardPos.Value.y;
         
-        Debug.Log($"💀 Removing card at row {row}, col {col}");
+        Debug.Log($"Removing card at ({col}, {row})");
         
         // Store original state
         Vector3 startPosition = cardToRemove.transform.position;
@@ -794,13 +913,31 @@ public class GameManager : MonoBehaviour
         // Add to discard pile (this will set parent, tag, etc.)
         discardPile.AddToDiscard(cardToRemove);
         
-        // Clear last played card reference
+        // Clear last played card references
         lastPlayedCard = null;
+        lastPlayerCard = null;
         
-        Debug.Log("✅ Card successfully removed and sent to discard pile");
+        Debug.Log("Card removed and discarded");
     }
 
-    private void OnVictory() => enabled = false;
+    private void OnVictory()
+    {
+        Debug.Log("VICTORY! Player found the correct exit!");
+        
+        // Disable game updates
+        enabled = false;
+        
+        // Show victory UI
+        if (victoryUI != null)
+        {
+            victoryUI.ShowVictory();
+        }
+        else
+        {
+            Debug.LogWarning("VictoryUI not assigned to GameManager!");
+        }
+    }
+    
     private void OnWrongExit() { }
 
     private void ReceiveCallback(IAsyncResult ar)
@@ -810,16 +947,17 @@ public class GameManager : MonoBehaviour
             IPEndPoint ip = new IPEndPoint(IPAddress.Any, port);
             byte[] bytes = udpClient.EndReceive(ar, ref ip);
             string message = Encoding.UTF8.GetString(bytes);
-            if (message == "LOOKING_AWAY")
+            
+            bool newState = message == "LOOKING_AWAY";
+            
+            // Only update and log if state actually changed
+            if (newState != previousLookingAwayState)
             {
-                lookingAway = true;
-                Debug.Log("👁️ lookingAway = TRUE");
+                lookingAway = newState;
+                previousLookingAwayState = newState;
+                Debug.Log(newState ? "LOOKING_AWAY state activated" : "LOOKING state activated");
             }
-            else if (message == "LOOKING")
-            {
-                lookingAway = false;
-                Debug.Log("👁️ lookingAway = FALSE");
-            }
+            
             udpClient.BeginReceive(ReceiveCallback, null);
         }
         catch (Exception e)
@@ -830,12 +968,6 @@ public class GameManager : MonoBehaviour
 
     private void OnApplicationQuit()
     {
-        // Stop any running sabotage check
-        if (sabotageCheckCoroutine != null)
-        {
-            StopCoroutine(sabotageCheckCoroutine);
-        }
-        
         if (udpClient != null)
         {
             udpClient.Close();
@@ -845,4 +977,34 @@ public class GameManager : MonoBehaviour
     // Additional properties for grid dimensions
     public int gridWidth => gridZ;
     public int gridHeight => gridX;
+    
+    /// <summary>
+    /// Public method to re-validate the path after card state changes (e.g., uncensoring)
+    /// Call this when a card's blocking state changes
+    /// </summary>
+    public void RevalidatePath()
+    {
+        Debug.Log("Re-validating path after card state change...");
+        
+        var pathResult = ValidatePath();
+        if (pathResult.isComplete)
+        {
+            if (pathResult.isCorrect)
+            {
+                Debug.Log("Path complete after revalidation - CORRECT exit found!");
+                OnVictory();
+            }
+            else
+            {
+                Debug.Log("Path complete after revalidation - WRONG exit reached!");
+                OnWrongExit();
+            }
+        }
+        else
+        {
+            Debug.Log("Path still incomplete after revalidation");
+            // Optionally check for game over
+            CheckForGameOver();
+        }
+    }
 }

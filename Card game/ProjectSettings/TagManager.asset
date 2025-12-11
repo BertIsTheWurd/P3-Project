@@ -8,6 +8,7 @@ TagManager:
   - GridSlot
   - DrawPile
   - PlayedCard
+  - DiscardPile
   layers:
   - Default
   - TransparentFX
