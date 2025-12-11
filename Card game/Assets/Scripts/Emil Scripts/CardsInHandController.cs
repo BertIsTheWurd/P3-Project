@@ -66,6 +66,7 @@ public class CardsInHandController : MonoBehaviour {
         HandleCardSelection();
         HandleCardRotation();
         HandleGridPlacement();
+        HandleDiscardPileClick();
         if (isAnimatingSelection) {
             AnimateSelectedCard();
         }
@@ -81,13 +82,8 @@ public class CardsInHandController : MonoBehaviour {
                         SelectCard(index);
                     }
                 }
-                else if (hit.collider.CompareTag("GridSlot")) {
-                    // Don't deselect when clicking grid - let HandleGridPlacement handle it
-                }
-                else {
-                    // Deselect if clicking elsewhere
-                    DeselectCard();
-                }
+                // Don't deselect when clicking grid, discard pile, or anywhere else
+                // Player can select a different card to change selection
             }
         }
     }
@@ -247,6 +243,93 @@ public class CardsInHandController : MonoBehaviour {
                 card.Rotate180();
                 Debug.Log($"Rotated card: {card.cardData.cardName} to {card.GetRotation()} degrees");
             }
+        }
+    }
+    
+    private void HandleCardDiscard() {
+        // Removed - now using click on discard pile instead
+    }
+    
+    /// <summary>
+    /// Handle clicking on the discard pile to discard the selected card
+    /// </summary>
+    private void HandleDiscardPileClick() {
+        // Only check if a card is selected
+        if (currentCardIndex == -1 || currentlySelectedCard == null) return;
+        
+        if (Mouse.current.leftButton.wasPressedThisFrame) {
+            Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
+            if (Physics.Raycast(ray, out RaycastHit hit)) {
+                // Check if we clicked on the discard pile or any card in it
+                if (hit.collider.CompareTag("DiscardPile") || hit.collider.CompareTag("DiscardPileBase")) {
+                    DiscardSelectedCard();
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Discard the currently selected card. This uses up the player's turn.
+    /// </summary>
+    public void DiscardSelectedCard() {
+        if (currentlySelectedCard == null || gameManager == null) return;
+        
+        GameObject cardToDiscard = currentlySelectedCard;
+        Card cardComponent = cardToDiscard.GetComponent<Card>();
+        
+        string cardName = cardComponent != null && cardComponent.cardData != null 
+            ? cardComponent.cardData.cardName 
+            : "Unknown";
+        
+        Debug.Log($"Discarding card: {cardName}");
+        
+        // Reset the card's visual state before discarding
+        SpriteRenderer spriteRenderer = cardToDiscard.GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null) {
+            spriteRenderer.color = Color.white; // Remove yellow tint
+        }
+        
+        // Reset card rotation if needed
+        if (cardComponent != null) {
+            cardComponent.ResetRotation();
+        }
+        
+        // Clear selection state FIRST to prevent any animation callbacks
+        int indexToRemove = currentCardIndex;
+        GameObject cardRef = currentlySelectedCard;
+        currentCardIndex = -1;
+        currentlySelectedCard = null;
+        isAnimatingSelection = false;
+        
+        // Remove from the internal list
+        if (cardObjectsInHand.Contains(cardRef)) {
+            cardObjectsInHand.Remove(cardRef);
+        }
+        
+        // Unparent from hand holder immediately
+        cardRef.transform.SetParent(null);
+        
+        // Reposition remaining cards
+        RepositionAllCards();
+        
+        // Add to discard pile
+        DiscardPile discardPile = FindObjectOfType<DiscardPile>();
+        if (discardPile != null) {
+            discardPile.AddToDiscard(cardRef);
+        }
+        
+        Debug.Log($"✅ Card discarded: {cardName}");
+        
+        // Draw cards until hand is full (same as playing a card)
+        gameManager.DrawUntilFullHand();
+        
+        // Check for game over (in case discarding was the last option)
+        gameManager.CheckForGameOver();
+        
+        // Notify Supervisor that player's turn ended
+        SupervisorAI supervisor = FindObjectOfType<SupervisorAI>();
+        if (supervisor != null) {
+            supervisor.OnPlayerTurnEnd();
         }
     }
 

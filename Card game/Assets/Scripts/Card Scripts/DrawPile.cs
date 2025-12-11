@@ -104,6 +104,14 @@ public class DrawPile : MonoBehaviour
             if (cardComponent != null)
             {
                 cardComponent.UpdateAppearanceBasedOnTag();
+                cardComponent.ResetRotation(); // Reset any rotation from previous use
+            }
+            
+            // Reset sprite color to white (remove any tints from previous use)
+            var spriteRenderer = card.GetComponent<SpriteRenderer>();
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color = Color.white;
             }
 
             Debug.Log($"Drew card: {card.GetComponent<Card>().cardData.cardName}, {drawPile.Count} cards remaining");

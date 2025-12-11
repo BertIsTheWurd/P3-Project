@@ -9,6 +9,7 @@ TagManager:
   - DrawPile
   - PlayedCard
   - DiscardPile
+  - DiscardPileBase
   layers:
   - Default
   - TransparentFX

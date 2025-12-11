@@ -160,6 +160,19 @@ public class PeekCardHandler : MonoBehaviour
         peekCardInHand = null;
         
         Debug.Log("✅ Peek card used and discarded");
+        
+        // Draw cards until hand is full (same as playing a directional card)
+        if (gameManager != null)
+        {
+            gameManager.DrawUntilFullHand();
+            
+            // Notify Supervisor that player's turn ended
+            SupervisorAI supervisor = FindObjectOfType<SupervisorAI>();
+            if (supervisor != null)
+            {
+                supervisor.OnPlayerTurnEnd();
+            }
+        }
     }
     
     /// <summary>
