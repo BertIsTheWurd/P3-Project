@@ -534,6 +534,7 @@ public class SupervisorAI : MonoBehaviour
         {
             // Normal card placement
             gameManager.PlayCard(card, position.x, position.y);
+            DialogueManager.Instance.playCardPlacementLines?.Invoke(card); // Play card placement voice line
             Debug.Log($"🎭 Supervisor placed {cardComponent.cardData.cardName} at ({position.x}, {position.y})");
         }
         

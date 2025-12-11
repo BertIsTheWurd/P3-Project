@@ -98,6 +98,12 @@ public class GameManager : MonoBehaviour
         drawPile.Initialize(cardPool.cards);
         DrawUntilFullHand();
 
+        // Play intro voice line
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.playIntroLine?.Invoke();
+        }
+
         // Initialize UDP with error handling
         try
         {
@@ -1096,6 +1102,13 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("GAME OVER - All paths to correct exit are blocked");
         Debug.Log("Supervisor successfully blocked all escape routes");
+
+        // Play supervisor win voice line
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.playSupervisorLossLine?.Invoke();
+        }
+    
         
         // Disable game updates
         enabled = false;
@@ -1433,6 +1446,12 @@ public class GameManager : MonoBehaviour
     private void OnVictory()
     {
         Debug.Log("VICTORY! Player found the correct exit!");
+
+        // Play supervisor loss voice line
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.playSupervisorWinLine?.Invoke();
+        }
         
         // Disable game updates
         enabled = false;
