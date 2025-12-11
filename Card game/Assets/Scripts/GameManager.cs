@@ -24,7 +24,7 @@ public class GameManager : MonoBehaviour
     public DrawPile drawPile;
     public DiscardPile discardPile;
     public CardsInHandController handController;
-    public VictoryUI victoryUI;
+    public GameEndUI gameEndUI;
     public GameObject[,] playedCards;
     public Vector3[,] cardSlots;
     private GameObject[,] gridSlotObjects;
@@ -98,9 +98,23 @@ public class GameManager : MonoBehaviour
         drawPile.Initialize(cardPool.cards);
         DrawUntilFullHand();
 
-        udpClient = new UdpClient(port);
-        udpClient.BeginReceive(ReceiveCallback, null);
-        Debug.Log("UDP Listener started on port " + port);
+        // Initialize UDP with error handling
+        try
+        {
+            // Close any existing connection first
+            CleanupUDP();
+            
+            udpClient = new UdpClient();
+            udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, port));
+            udpClient.BeginReceive(ReceiveCallback, null);
+            Debug.Log("UDP Listener started on port " + port);
+        }
+        catch (SocketException e)
+        {
+            Debug.LogError($"Failed to start UDP Listener on port {port}: {e.Message}");
+            Debug.LogError("Try restarting Unity or changing the port number.");
+        }
     }
 
     private void CreateGridSlots()
@@ -780,12 +794,18 @@ public class GameManager : MonoBehaviour
         Debug.Log("GAME OVER - All paths to correct exit are blocked");
         Debug.Log("Supervisor successfully blocked all escape routes");
         
-        // TODO: Show game over screen
-        // TODO: Display message "The Supervisor blocked all paths"
-        // TODO: Show restart/quit options
+        // Disable game updates
+        enabled = false;
         
-        // For now, just log it
-        // You can add UI here later
+        // Show game over UI
+        if (gameEndUI != null)
+        {
+            gameEndUI.ShowGameOver();
+        }
+        else
+        {
+            Debug.LogWarning("GameEndUI not assigned to GameManager!");
+        }
     }
     
     /// <summary>
@@ -928,13 +948,13 @@ public class GameManager : MonoBehaviour
         enabled = false;
         
         // Show victory UI
-        if (victoryUI != null)
+        if (gameEndUI != null)
         {
-            victoryUI.ShowVictory();
+            gameEndUI.ShowVictory();
         }
         else
         {
-            Debug.LogWarning("VictoryUI not assigned to GameManager!");
+            Debug.LogWarning("GameEndUI not assigned to GameManager!");
         }
     }
     
@@ -960,17 +980,45 @@ public class GameManager : MonoBehaviour
             
             udpClient.BeginReceive(ReceiveCallback, null);
         }
+        catch (ObjectDisposedException)
+        {
+            // Socket was closed, this is expected during shutdown
+        }
         catch (Exception e)
         {
             Debug.LogError($"UDP Error: {e.Message}");
         }
     }
 
+    private void OnDisable()
+    {
+        CleanupUDP();
+    }
+
+    private void OnDestroy()
+    {
+        CleanupUDP();
+    }
+
     private void OnApplicationQuit()
+    {
+        CleanupUDP();
+    }
+    
+    private void CleanupUDP()
     {
         if (udpClient != null)
         {
-            udpClient.Close();
+            try
+            {
+                udpClient.Close();
+                udpClient = null;
+                Debug.Log("UDP Listener closed");
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Error closing UDP: {e.Message}");
+            }
         }
     }
 
