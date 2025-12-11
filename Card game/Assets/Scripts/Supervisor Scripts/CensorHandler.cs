@@ -172,30 +172,49 @@ public class CensorHandler : MonoBehaviour
         
         Debug.Log($"🔒 Censoring card at position");
         
-        // Mark card as censored
         Card card = targetCard.GetComponent<Card>();
         if (card != null)
         {
+            // Mark card as censored
             card.isCensored = true;
-        }
-        
-        // If a censor card object was provided, track it as the overlay
-        if (censorCard != null)
-        {
-            censoredCards[targetCard] = censorCard;
-        }
-        // Otherwise, create visual overlay if prefab exists
-        else if (censorOverlayPrefab != null)
-        {
-            GameObject overlay = Instantiate(censorOverlayPrefab, targetCard.transform);
-            overlay.transform.localPosition = new Vector3(0, 0.01f, 0); // Slightly above card
-            overlay.transform.localRotation = Quaternion.identity;
-            overlay.transform.localScale = Vector3.one;
             
-            censoredCards[targetCard] = overlay;
+            // Show censor overlay on the card itself
+            if (censorCard != null)
+            {
+                // Get the censor sprite from the censor card
+                Card censorCardComponent = censorCard.GetComponent<Card>();
+                if (censorCardComponent != null && censorCardComponent.cardData != null && censorCardComponent.cardData.cardImage != null)
+                {
+                    card.ShowCensorOverlay(censorCardComponent.cardData.cardImage);
+                }
+                else
+                {
+                    card.ShowCensorOverlay(); // Use default censor sprite
+                }
+                
+                // Track the censor card object for removal later
+                censoredCards[targetCard] = censorCard;
+                
+                // Hide the original censor card since we're using it as an overlay
+                censorCard.SetActive(false);
+            }
+            else if (censorOverlayPrefab != null)
+            {
+                // Old method: Create visual overlay if prefab exists
+                GameObject overlay = Instantiate(censorOverlayPrefab, targetCard.transform);
+                overlay.transform.localPosition = new Vector3(0, 0.01f, 0);
+                overlay.transform.localRotation = Quaternion.identity;
+                overlay.transform.localScale = Vector3.one;
+                
+                censoredCards[targetCard] = overlay;
+            }
+            else
+            {
+                // No overlay available, just use the sprite overlay
+                card.ShowCensorOverlay();
+            }
         }
         
-        // Path validation will automatically treat censored cards as broken connections
         Debug.Log("✅ Card censored - path connections disabled");
     }
     
@@ -208,14 +227,15 @@ public class CensorHandler : MonoBehaviour
         
         Debug.Log($"🔓 Uncensoring card");
         
-        // Unmark card
+        // Unmark card and remove sprite overlay
         Card card = targetCard.GetComponent<Card>();
         if (card != null)
         {
             card.isCensored = false;
+            card.RemoveCensorOverlay(); // Remove the sprite overlay!
         }
         
-        // Remove visual overlay
+        // Remove visual overlay (old method) and tracked censor card
         if (censoredCards.ContainsKey(targetCard))
         {
             GameObject overlay = censoredCards[targetCard];

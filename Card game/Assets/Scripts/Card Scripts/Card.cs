@@ -5,6 +5,12 @@ public class Card : MonoBehaviour
     public DirectionalCardData cardData;
     private SpriteRenderer spriteRenderer;
     
+    // Censor overlay (child sprite renderer)
+    [Header("Censor Overlay")]
+    public Sprite censoredSprite;  // Assign in Inspector or set via code
+    private GameObject censorOverlay;
+    private SpriteRenderer censorOverlayRenderer;
+    
     // Rotation state (0, 90, 180, 270 degrees)
     private int currentRotation = 0;
     
@@ -287,6 +293,73 @@ public class Card : MonoBehaviour
                 case 270: return originalConnectsDown;
                 default:  return originalConnectsRight;
             }
+        }
+    }
+    
+    /// <summary>
+    /// Show censor overlay on this card
+    /// </summary>
+    public void ShowCensorOverlay(Sprite censorSprite = null)
+    {
+        // Use provided sprite or the one assigned in inspector
+        Sprite spriteToUse = censorSprite != null ? censorSprite : censoredSprite;
+        
+        // Create overlay if it doesn't exist
+        if (censorOverlay == null)
+        {
+            censorOverlay = new GameObject("CensorOverlay");
+            censorOverlay.transform.SetParent(transform);
+            censorOverlay.transform.localPosition = new Vector3(0, 0, -0.1f); // In front of card (closer to camera)
+            censorOverlay.transform.localRotation = Quaternion.identity;
+            censorOverlay.transform.localScale = Vector3.one;
+            
+            censorOverlayRenderer = censorOverlay.AddComponent<SpriteRenderer>();
+            censorOverlayRenderer.sortingOrder = spriteRenderer.sortingOrder + 1; // Render above card
+        }
+        
+        // If we have a sprite, use it
+        if (spriteToUse != null)
+        {
+            censorOverlayRenderer.sprite = spriteToUse;
+        }
+        else
+        {
+            // No sprite available - create a semi-transparent red tint as visual feedback
+            Debug.LogWarning("No censor sprite available - creating color overlay!");
+            
+            // Create a simple colored quad
+            censorOverlayRenderer.sprite = spriteRenderer.sprite; // Use same sprite as card
+            censorOverlayRenderer.color = new Color(1f, 0f, 0f, 0.5f); // Semi-transparent red
+        }
+        
+        censorOverlay.SetActive(true);
+        
+        Debug.Log($"✅ Censor overlay shown on {cardData.cardName}");
+    }
+    
+    /// <summary>
+    /// Hide censor overlay on this card
+    /// </summary>
+    public void HideCensorOverlay()
+    {
+        if (censorOverlay != null)
+        {
+            censorOverlay.SetActive(false);
+            Debug.Log($"✅ Censor overlay hidden on {cardData.cardName}");
+        }
+    }
+    
+    /// <summary>
+    /// Remove censor overlay completely
+    /// </summary>
+    public void RemoveCensorOverlay()
+    {
+        if (censorOverlay != null)
+        {
+            Destroy(censorOverlay);
+            censorOverlay = null;
+            censorOverlayRenderer = null;
+            Debug.Log($"✅ Censor overlay removed from {cardData.cardName}");
         }
     }
 }

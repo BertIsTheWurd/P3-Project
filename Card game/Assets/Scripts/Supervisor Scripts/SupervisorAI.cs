@@ -498,10 +498,18 @@ public class SupervisorAI : MonoBehaviour
                 Card targetCardComponent = targetCard.GetComponent<Card>();
                 Debug.Log($"🎭 Supervisor censoring card at ({position.x}, {position.y}) - Target: {(targetCardComponent != null ? targetCardComponent.cardData.cardName : "UNKNOWN")}");
                 
-                // Position the Censor card on top of the target card
-                card.transform.position = targetCard.transform.position + new Vector3(0, 0.02f, 0);
+                // Position the Censor card on top of the target card (higher offset for visibility)
+                card.transform.position = targetCard.transform.position + new Vector3(0, 0.1f, 0);
                 card.transform.rotation = Quaternion.Euler(90, 0, 0); // Lie flat
                 card.transform.localScale = Vector3.one * 0.25f;
+                
+                // Ensure censor card is active and visible
+                card.SetActive(true);
+                Renderer censorRenderer = card.GetComponent<Renderer>();
+                if (censorRenderer != null)
+                {
+                    censorRenderer.enabled = true;
+                }
                 
                 // Mark the target card as censored
                 if (targetCardComponent != null)
