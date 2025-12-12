@@ -1334,6 +1334,10 @@ public class GameManager : MonoBehaviour
             {
                 Debug.Log($"Sabotage executing - removing player card: {cardComponent.cardData.cardName}");
                 yield return StartCoroutine(RemoveLastPlayedCard());
+                if (DialogueManager.Instance != null)
+                {
+                    DialogueManager.Instance.playSupervisorRemovalLine?.Invoke();
+                }
             }
             else
             {

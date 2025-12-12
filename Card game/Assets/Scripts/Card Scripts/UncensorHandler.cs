@@ -167,12 +167,6 @@ public class UncensorHandler : MonoBehaviour
         ClearHighlights();
         
         Debug.Log($"🔓 Uncensor: Removing censor from card");
-
-        // Play supervisor removal voice line
-        if (DialogueManager.Instance != null)
-        {
-            DialogueManager.Instance.playSupervisorRemovalLine?.Invoke();
-        }
         
         // Get the censor card overlay before removing it
         GameObject censorOverlay = null;
