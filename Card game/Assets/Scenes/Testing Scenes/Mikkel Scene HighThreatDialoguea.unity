@@ -1555,8 +1555,8 @@ MonoBehaviour:
   gridSlotSprite: {fileID: 21300000, guid: 157703155119a407b86eb0a0fa8c6167, type: 3}
   gridCenter: {fileID: 1762771892}
   startCardData: {fileID: 11400000, guid: 5798cf0342a3049829e629796719a511, type: 2}
-  correctEndCardData: {fileID: 11400000, guid: aae24070f010f40bba0eec0515474f4d, type: 2}
-  wrongEndCardData: {fileID: 11400000, guid: 1d050f51d4e0d4d669c05e4fe07767a9, type: 2}
+  correctEndCardData: {fileID: 11400000, guid: 1d050f51d4e0d4d669c05e4fe07767a9, type: 2}
+  wrongEndCardData: {fileID: 11400000, guid: e381d41624c0e47fc846ea2bbab01a71, type: 2}
   cardPool: {fileID: 910361282}
   drawPile: {fileID: 1576927271}
   discardPile: {fileID: 374722153}
@@ -1767,7 +1767,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1882cb1b6dc5149c5af7583bd6403fd0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PeekCardHandler
-  highlightColor: {r: 1, g: 1, b: 0, a: 0.8}
+  highlightColor: {r: 1, g: 1, b: 1, a: 0.8}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!4 &649441043
 Transform:
