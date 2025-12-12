@@ -372,7 +372,6 @@ Transform:
   m_Children:
   - {fileID: 1049529217}
   - {fileID: 1915951586}
-  - {fileID: 1216982457}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &507905710
@@ -813,8 +812,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 982864028}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.03288847, y: -0.017443007, z: 0.0005740717, w: 0.9993067}
-  m_LocalPosition: {x: 0.2221508, y: 3.6662202, z: -7.5329895}
+  m_LocalRotation: {x: 0.1564345, y: 0, z: 0, w: 0.98768836}
+  m_LocalPosition: {x: 0.2221508, y: 3.6662202, z: -6.5329895}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -990,7 +989,7 @@ GameObject:
   - component: {fileID: 1049529217}
   - component: {fileID: 1049529218}
   m_Layer: 0
-  m_Name: CM_HandView
+  m_Name: CM_Boardview
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1004,81 +1003,6 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1049529216}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.17362171, y: -0.017187307, z: 0.0030305856, w: 0.98465776}
-  m_LocalPosition: {x: -18.5, y: 10, z: -70}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 434596604}
-  m_LocalEulerAnglesHint: {x: 20, y: -2, z: 0}
---- !u!114 &1049529218
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1049529216}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f9dfa5b682dcd46bda6128250e975f58, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineCamera
-  Priority:
-    Enabled: 1
-    m_Value: 0
-  OutputChannel: 1
-  StandbyUpdate: 2
-  m_StreamingVersion: 20241001
-  m_LegacyPriority: 0
-  Target:
-    TrackingTarget: {fileID: 0}
-    LookAtTarget: {fileID: 0}
-    CustomLookAtTarget: 0
-  Lens:
-    FieldOfView: 77.40487
-    OrthographicSize: 5
-    NearClipPlane: 0.3
-    FarClipPlane: 1000
-    Dutch: 0
-    ModeOverride: 0
-    PhysicalProperties:
-      GateFit: 2
-      SensorSize: {x: 21.946, y: 16.002}
-      LensShift: {x: 0, y: 0}
-      FocusDistance: 10
-      Iso: 200
-      ShutterSpeed: 0.005
-      Aperture: 16
-      BladeCount: 5
-      Curvature: {x: 2, y: 11}
-      BarrelClipping: 0.25
-      Anamorphism: 0
-  BlendHint: 0
---- !u!1 &1216982456
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1216982457}
-  - component: {fileID: 1216982458}
-  m_Layer: 0
-  m_Name: CM_BoardView
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1216982457
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1216982456}
-  serializedVersion: 2
   m_LocalRotation: {x: 0.5735764, y: 0, z: 0, w: 0.8191521}
   m_LocalPosition: {x: -18.5, y: 10, z: -65}
   m_LocalScale: {x: 1, y: 1, z: 1}
@@ -1086,13 +1010,13 @@ Transform:
   m_Children: []
   m_Father: {fileID: 434596604}
   m_LocalEulerAnglesHint: {x: 70, y: 0, z: 0}
---- !u!114 &1216982458
+--- !u!114 &1049529218
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1216982456}
+  m_GameObject: {fileID: 1049529216}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f9dfa5b682dcd46bda6128250e975f58, type: 3}
@@ -1204,17 +1128,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraSwitcher
   cameras:
-  - {fileID: 1049529218}
   - {fileID: 1915951587}
-  - {fileID: 1216982458}
+  - {fileID: 1049529218}
   cardPlaceholder: {fileID: 1708531459}
   cardPositions:
-  - {x: 0.1, y: 3, z: -6.2}
-  - {x: 0.1, y: 0, z: -62}
-  - {x: 0, y: 1, z: -3}
+  - {x: 0.1, y: 0, z: -3.5}
+  - {x: 0.1, y: 1, z: -2.8}
   cardRotations:
-  - {x: 45, y: 0, z: 0}
-  - {x: 45, y: 0, z: 0}
+  - {x: 90, y: 0, z: 0}
   - {x: 90, y: 0, z: 0}
   cardAnimationDuration: 0.5
   cardAnimationCurve:
@@ -1241,10 +1162,6 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  cameraBlendTime: 1
-  animateCardsBeforeCameraSwitch: 1
-  cardDelayBeforeCamera: 0
-  cardDelayAfterCamera: 0.3
   currentCameraIndex: 1
 --- !u!4 &1560944170
 Transform:
@@ -1423,13 +1340,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1915951585}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.03288847, y: -0.017443007, z: 0.0005740717, w: 0.9993067}
-  m_LocalPosition: {x: -18.5, y: 10, z: -70}
+  m_LocalRotation: {x: 0.1564345, y: 0, z: 0, w: 0.98768836}
+  m_LocalPosition: {x: -18.5, y: 10, z: -69}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 434596604}
-  m_LocalEulerAnglesHint: {x: 3.77, y: -2, z: 0}
+  m_LocalEulerAnglesHint: {x: 18, y: 0, z: 0}
 --- !u!114 &1915951587
 MonoBehaviour:
   m_ObjectHideFlags: 0
