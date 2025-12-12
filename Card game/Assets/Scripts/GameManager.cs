@@ -68,6 +68,15 @@ public class GameManager : MonoBehaviour
     
     private void Update()
     {
+        // Escape key to toggle pause menu
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            if (gameEndUI != null)
+            {
+                gameEndUI.ShowPauseMenu();
+            }
+        }
+        
         // Continuously monitor looking away state
         if (lookingAway && lastPlayerCard != null && !isSabotageActive)
         {

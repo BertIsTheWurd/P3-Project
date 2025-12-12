@@ -42,6 +42,14 @@ public class GameEndUI : MonoBehaviour
     [Tooltip("Color for game over message (optional)")]
     public Color gameOverColor = new Color(0.8f, 0.2f, 0.2f, 1f); // Reddish
     
+    [Header("Pause Menu Settings")]
+    [Tooltip("Pause menu message to display")]
+    [TextArea(2, 4)]
+    public string pauseMessage = "Game Paused";
+    
+    [Tooltip("Color for pause message")]
+    public Color pauseColor = Color.white;
+    
     [Header("Animation Settings")]
     public float fadeInDuration = 0.5f;
     public float panelScaleStart = 0.8f;
@@ -113,6 +121,22 @@ public class GameEndUI : MonoBehaviour
     {
         ShowEndScreen(customMessage, gameOverColor);
         Debug.Log("Game Over UI displayed");
+    }
+    
+    /// <summary>
+    /// Show the pause menu (can be toggled with Escape)
+    /// </summary>
+    public void ShowPauseMenu()
+    {
+        // If already showing, hide it instead (toggle behavior)
+        if (endGamePanel != null && endGamePanel.activeSelf)
+        {
+            Hide();
+            return;
+        }
+        
+        ShowEndScreen(pauseMessage, pauseColor);
+        Debug.Log("Pause Menu displayed");
     }
     
     /// <summary>
