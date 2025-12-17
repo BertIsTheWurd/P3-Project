@@ -167,7 +167,7 @@ public class WarrantHandler : MonoBehaviour
         ClearHighlights();
         
         Debug.Log($"📜 Warrant: Removing Bureaucratic Barrier at position");
-        
+            
         // Animate barrier removal (optional - pulse/fade)
         yield return StartCoroutine(AnimateBarrierRemoval(barrier));
         

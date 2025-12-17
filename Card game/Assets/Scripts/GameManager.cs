@@ -68,6 +68,15 @@ public class GameManager : MonoBehaviour
     
     private void Update()
     {
+        // Escape key to toggle pause menu
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            if (gameEndUI != null)
+            {
+                gameEndUI.ShowPauseMenu();
+            }
+        }
+        
         // Continuously monitor looking away state
         if (lookingAway && lastPlayerCard != null && !isSabotageActive)
         {
@@ -97,6 +106,12 @@ public class GameManager : MonoBehaviour
         yield return null;
         drawPile.Initialize(cardPool.cards);
         DrawUntilFullHand();
+
+        // Play intro voice line
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.playIntroLine?.Invoke();
+        }
 
         // Initialize UDP with error handling
         try
@@ -831,9 +846,8 @@ public class GameManager : MonoBehaviour
     
     /// <summary>
     /// Check if the correct exit is still reachable from start.
-    /// This checks two conditions:
-    /// 1. The start card still has at least one open exit (can place cards)
-    /// 2. There's a potential path from start to the correct exit (not fully blocked by barrier cards)
+    /// This checks if there's any possible way to build a path from the player's
+    /// current reachable cards to the correct exit through empty spaces.
     /// Returns false if the player cannot possibly win.
     /// </summary>
     private bool IsCorrectExitReachable()
@@ -847,37 +861,204 @@ public class GameManager : MonoBehaviour
         Card startCard = GetCachedCard(startCardObj);
         if (startCard == null) return false;
         
-        // First check: Can we extend from start or any card connected to start?
         // Find all cells reachable from start via valid connections
         HashSet<(int row, int col)> reachableFromStart = GetCellsReachableFromStart();
+        Debug.Log($"IsCorrectExitReachable: {reachableFromStart.Count} cells reachable from start");
         
-        // Check if any reachable cell has an open exit to an empty slot
-        bool canExtendPath = false;
-        foreach (var (row, col) in reachableFromStart)
+        // Check if we've already connected to the correct exit
+        if (reachableFromStart.Contains((correctEndRow, gridZ - 1)))
         {
-            if (HasOpenExitToEmptySlot(row, col))
-            {
-                canExtendPath = true;
-                break;
-            }
+            return true; // We've reached the exit!
         }
         
-        // If we can't extend the path at all, check if we already reached the exit
-        if (!canExtendPath)
+        // Get all empty slots that are adjacent to reachable cards with open exits pointing to them
+        HashSet<(int row, int col)> reachableEmptySlots = GetReachableEmptySlots(reachableFromStart);
+        Debug.Log($"IsCorrectExitReachable: {reachableEmptySlots.Count} reachable empty slots");
+        
+        if (reachableEmptySlots.Count == 0)
         {
-            // Check if we've already connected to the correct exit
-            if (reachableFromStart.Contains((correctEndRow, gridZ - 1)))
-            {
-                return true; // We've reached the exit!
-            }
-            
-            Debug.Log("IsCorrectExitReachable: No open exits from any reachable card - path is blocked!");
+            Debug.Log("IsCorrectExitReachable: No reachable empty slots - path is completely blocked!");
             return false;
         }
         
-        // Second check: Can we potentially reach the correct exit via flood-fill?
-        // (accounting for blocking cards)
-        return CanPotentiallyReachExit(reachableFromStart);
+        // Log the reachable empty slots for debugging
+        foreach (var (row, col) in reachableEmptySlots)
+        {
+            Debug.Log($"  Reachable empty slot at row {row}, col {col}");
+        }
+        
+        // Now flood-fill from those reachable empty slots to see if we can reach the correct exit
+        // We can pass through empty slots and non-blocking cards, but not through blocking cards
+        bool canReach = CanReachExitFromEmptySlots(reachableEmptySlots);
+        Debug.Log($"IsCorrectExitReachable: CanReachExitFromEmptySlots returned {canReach}");
+        return canReach;
+    }
+    
+    /// <summary>
+    /// Get all empty slots that can be reached from the player's current path.
+    /// An empty slot is reachable if a connected card has an open exit pointing to it.
+    /// </summary>
+    private HashSet<(int row, int col)> GetReachableEmptySlots(HashSet<(int row, int col)> reachableCards)
+    {
+        HashSet<(int row, int col)> reachableEmpty = new HashSet<(int, int)>();
+        
+        foreach (var (row, col) in reachableCards)
+        {
+            GameObject cardObj = playedCards[row, col];
+            if (cardObj == null) continue;
+            
+            Card card = GetCachedCard(cardObj);
+            if (card == null) continue;
+            
+            // Skip blocking/censored cards - they don't have usable exits
+            if (!card.cardData.isStart && !card.cardData.isEnd)
+            {
+                if (card.cardData.cardType == CardType.DeadEnd ||
+                    card.cardData.cardType == CardType.BureaucraticBarrier ||
+                    card.isCensored)
+                {
+                    continue;
+                }
+            }
+            
+            // Check each direction for open exits to empty slots
+            if (card.ConnectsUp && row > 0 && playedCards[row - 1, col] == null)
+            {
+                reachableEmpty.Add((row - 1, col));
+            }
+            if (card.ConnectsDown && row < gridX - 1 && playedCards[row + 1, col] == null)
+            {
+                reachableEmpty.Add((row + 1, col));
+            }
+            if (card.ConnectsLeft && col > 0 && playedCards[row, col - 1] == null)
+            {
+                reachableEmpty.Add((row, col - 1));
+            }
+            if (card.ConnectsRight && col < gridZ - 1 && playedCards[row, col + 1] == null)
+            {
+                reachableEmpty.Add((row, col + 1));
+            }
+        }
+        
+        return reachableEmpty;
+    }
+    
+    /// <summary>
+    /// Check if we can reach the correct exit by flood-filling from reachable empty slots.
+    /// We can pass through empty slots but are blocked by DeadEnd/BureaucraticBarrier cards.
+    /// </summary>
+    private bool CanReachExitFromEmptySlots(HashSet<(int row, int col)> startingEmptySlots)
+    {
+        HashSet<(int row, int col)> visited = new HashSet<(int, int)>();
+        Queue<(int row, int col)> queue = new Queue<(int, int)>();
+        
+        // Start from all reachable empty slots
+        foreach (var cell in startingEmptySlots)
+        {
+            queue.Enqueue(cell);
+        }
+        
+        Debug.Log($"CanReachExitFromEmptySlots: Starting flood-fill, looking for exit at row {correctEndRow}, col {gridZ - 1}");
+        
+        while (queue.Count > 0)
+        {
+            var (row, col) = queue.Dequeue();
+            if (visited.Contains((row, col))) continue;
+            visited.Add((row, col));
+            
+            // Check if this is the correct exit position
+            if (row == correctEndRow && col == gridZ - 1)
+            {
+                Debug.Log($"CanReachExitFromEmptySlots: Reached correct exit position!");
+                // Check if there's actually an end card here we can connect to
+                GameObject endCardObj = playedCards[row, col];
+                if (endCardObj != null)
+                {
+                    Card endCard = GetCachedCard(endCardObj);
+                    if (endCard != null && endCard.cardData.isEnd)
+                    {
+                        Debug.Log($"CanReachExitFromEmptySlots: Found end card - returning true");
+                        return true; // Can reach the correct exit!
+                    }
+                }
+            }
+            
+            // Check what's at this position
+            GameObject cardObj = playedCards[row, col];
+            
+            if (cardObj == null)
+            {
+                // Empty slot - can pass through in all directions
+                if (row > 0 && !IsBlockingCard(row - 1, col)) 
+                    queue.Enqueue((row - 1, col));
+                if (row < gridX - 1 && !IsBlockingCard(row + 1, col)) 
+                    queue.Enqueue((row + 1, col));
+                if (col > 0 && !IsBlockingCard(row, col - 1)) 
+                    queue.Enqueue((row, col - 1));
+                if (col < gridZ - 1 && !IsBlockingCard(row, col + 1)) 
+                    queue.Enqueue((row, col + 1));
+            }
+            else
+            {
+                // There's a card here - check if it's blocking
+                Card card = GetCachedCard(cardObj);
+                if (card != null)
+                {
+                    // End cards are reachable (that's our goal)
+                    if (card.cardData.isEnd)
+                    {
+                        if (row == correctEndRow && col == gridZ - 1)
+                        {
+                            Debug.Log($"CanReachExitFromEmptySlots: Found correct end card directly");
+                            return true;
+                        }
+                        // Wrong exit - don't continue through it
+                        continue;
+                    }
+                    
+                    // Blocking cards stop the flood-fill
+                    if (card.cardData.cardType == CardType.DeadEnd ||
+                        card.cardData.cardType == CardType.BureaucraticBarrier ||
+                        card.isCensored)
+                    {
+                        Debug.Log($"CanReachExitFromEmptySlots: Hit blocking card at row {row}, col {col}");
+                        continue;
+                    }
+                    
+                    // Non-blocking card - can pass through
+                    if (row > 0 && !IsBlockingCard(row - 1, col)) 
+                        queue.Enqueue((row - 1, col));
+                    if (row < gridX - 1 && !IsBlockingCard(row + 1, col)) 
+                        queue.Enqueue((row + 1, col));
+                    if (col > 0 && !IsBlockingCard(row, col - 1)) 
+                        queue.Enqueue((row, col - 1));
+                    if (col < gridZ - 1 && !IsBlockingCard(row, col + 1)) 
+                        queue.Enqueue((row, col + 1));
+                }
+            }
+        }
+        
+        Debug.Log($"CanReachExitFromEmptySlots: Flood-fill complete, visited {visited.Count} cells, exit NOT reachable");
+        return false;
+    }
+    
+    /// <summary>
+    /// Check if a position contains a blocking card (DeadEnd, BureaucraticBarrier, or censored)
+    /// </summary>
+    private bool IsBlockingCard(int row, int col)
+    {
+        GameObject cardObj = playedCards[row, col];
+        if (cardObj == null) return false; // Empty is not blocking
+        
+        Card card = GetCachedCard(cardObj);
+        if (card == null) return false;
+        
+        // Start and end cards are never blocking for flood-fill purposes
+        if (card.cardData.isStart || card.cardData.isEnd) return false;
+        
+        return card.cardData.cardType == CardType.DeadEnd ||
+               card.cardData.cardType == CardType.BureaucraticBarrier ||
+               card.isCensored;
     }
     
     /// <summary>
@@ -961,141 +1142,19 @@ public class GameManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Check if a card at the given position has an open exit leading to an empty slot.
-    /// This means the player could potentially place a card there.
-    /// </summary>
-    private bool HasOpenExitToEmptySlot(int row, int col)
-    {
-        GameObject cardObj = playedCards[row, col];
-        if (cardObj == null) return false;
-        
-        Card card = GetCachedCard(cardObj);
-        if (card == null) return false;
-        
-        // Blocking cards don't have open exits
-        if (!card.cardData.isStart && !card.cardData.isEnd)
-        {
-            if (card.cardData.cardType == CardType.DeadEnd ||
-                card.cardData.cardType == CardType.BureaucraticBarrier)
-            {
-                return false;
-            }
-            
-            if (card.isCensored)
-            {
-                return false;
-            }
-        }
-        
-        // Check each direction - if card connects that way AND the neighbor slot is empty
-        if (card.ConnectsUp && row > 0 && playedCards[row - 1, col] == null)
-        {
-            return true;
-        }
-        
-        if (card.ConnectsDown && row < gridX - 1 && playedCards[row + 1, col] == null)
-        {
-            return true;
-        }
-        
-        if (card.ConnectsLeft && col > 0 && playedCards[row, col - 1] == null)
-        {
-            return true;
-        }
-        
-        if (card.ConnectsRight && col < gridZ - 1 && playedCards[row, col + 1] == null)
-        {
-            return true;
-        }
-        
-        return false;
-    }
-    
-    /// <summary>
-    /// Check if we can potentially reach the correct exit from any reachable cell.
-    /// Uses flood-fill through empty spaces, blocked by DeadEnd/BureaucraticBarrier cards.
-    /// </summary>
-    private bool CanPotentiallyReachExit(HashSet<(int row, int col)> startingCells)
-    {
-        HashSet<(int row, int col)> visited = new HashSet<(int, int)>();
-        Queue<(int row, int col)> queue = new Queue<(int, int)>();
-        
-        // Start from all reachable cells
-        foreach (var cell in startingCells)
-        {
-            queue.Enqueue(cell);
-        }
-        
-        while (queue.Count > 0)
-        {
-            var (row, col) = queue.Dequeue();
-            if (visited.Contains((row, col))) continue;
-            visited.Add((row, col));
-            
-            // Found the correct exit!
-            if (row == correctEndRow && col == gridZ - 1)
-            {
-                return true;
-            }
-            
-            // Check if this is a blocking card
-            GameObject cardObj = playedCards[row, col];
-            if (cardObj != null)
-            {
-                Card card = GetCachedCard(cardObj);
-                if (card != null && !card.cardData.isStart && !card.cardData.isEnd)
-                {
-                    if (card.cardData.cardType == CardType.DeadEnd ||
-                        card.cardData.cardType == CardType.BureaucraticBarrier)
-                    {
-                        continue; // Blocked - don't explore from here
-                    }
-                }
-            }
-            
-            // Explore all 4 directions
-            int[] dRows = { -1, 1, 0, 0 };
-            int[] dCols = { 0, 0, -1, 1 };
-            
-            for (int i = 0; i < 4; i++)
-            {
-                int newRow = row + dRows[i];
-                int newCol = col + dCols[i];
-                
-                // Bounds check
-                if (newRow < 0 || newRow >= gridX || newCol < 0 || newCol >= gridZ)
-                    continue;
-                
-                // Check if neighbor is blocked
-                GameObject neighborObj = playedCards[newRow, newCol];
-                if (neighborObj != null)
-                {
-                    Card neighbor = GetCachedCard(neighborObj);
-                    if (neighbor != null && !neighbor.cardData.isStart && !neighbor.cardData.isEnd)
-                    {
-                        if (neighbor.cardData.cardType == CardType.DeadEnd ||
-                            neighbor.cardData.cardType == CardType.BureaucraticBarrier)
-                        {
-                            continue; // Can't pass through blocking cards
-                        }
-                    }
-                }
-                
-                queue.Enqueue((newRow, newCol));
-            }
-        }
-        
-        Debug.Log($"CanPotentiallyReachExit: Cannot reach exit at row {correctEndRow}, col {gridZ - 1}");
-        return false;
-    }
-    
-    /// <summary>
     /// Called when all paths to correct exit are blocked - Game Over
     /// </summary>
     private void OnGameOver()
     {
         Debug.Log("GAME OVER - All paths to correct exit are blocked");
         Debug.Log("Supervisor successfully blocked all escape routes");
+
+        // Play supervisor win voice line
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.playSupervisorLossLine?.Invoke();
+        }
+    
         
         // Disable game updates
         enabled = false;
@@ -1132,9 +1191,14 @@ public class GameManager : MonoBehaviour
     /// <summary>
     /// Check if the player has any cards in hand OR in the draw pile that could potentially unblock the path.
     /// This includes Uncensor cards (to remove censorship) and Warrant cards (to remove barriers).
+    /// Also checks if there are actually cards available to draw.
     /// </summary>
     private bool PlayerHasRescueCards()
     {
+        // First check: Are there any cards left to draw?
+        bool canDrawCards = (drawPile != null && drawPile.CardCount > 0) || 
+                           (discardPile != null && discardPile.CardCount > 0);
+        
         // Check if there are censored cards blocking the path AND player has/can get Uncensor
         if (HasCensoredCardsBlockingPath())
         {
@@ -1143,7 +1207,8 @@ public class GameManager : MonoBehaviour
                 Debug.Log("Player has Uncensor card in hand - game continues");
                 return true;
             }
-            if (DrawPileHasCardOfType(CardType.Uncensor))
+            // Only check draw pile if there are cards to draw
+            if (canDrawCards && DrawPileHasCardOfType(CardType.Uncensor))
             {
                 Debug.Log("Draw pile has Uncensor card available - game continues");
                 return true;
@@ -1158,7 +1223,8 @@ public class GameManager : MonoBehaviour
                 Debug.Log("Player has Warrant card in hand - game continues");
                 return true;
             }
-            if (DrawPileHasCardOfType(CardType.Warrant))
+            // Only check draw pile if there are cards to draw
+            if (canDrawCards && DrawPileHasCardOfType(CardType.Warrant))
             {
                 Debug.Log("Draw pile has Warrant card available - game continues");
                 return true;
@@ -1321,6 +1387,10 @@ public class GameManager : MonoBehaviour
             {
                 Debug.Log($"Sabotage executing - removing player card: {cardComponent.cardData.cardName}");
                 yield return StartCoroutine(RemoveLastPlayedCard());
+                if (DialogueManager.Instance != null)
+                {
+                    DialogueManager.Instance.playSupervisorRemovalLine?.Invoke();
+                }
             }
             else
             {
@@ -1433,6 +1503,12 @@ public class GameManager : MonoBehaviour
     private void OnVictory()
     {
         Debug.Log("VICTORY! Player found the correct exit!");
+
+        // Play supervisor loss voice line
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.playSupervisorWinLine?.Invoke();
+        }
         
         // Disable game updates
         enabled = false;
